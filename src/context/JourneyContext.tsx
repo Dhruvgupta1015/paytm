@@ -16,6 +16,7 @@ function buildInitialSteps(): JourneyStep[] {
 const INITIAL_STATE: JourneyState = {
   steps: buildInitialSteps(),
   currentStepIndex: 0,
+  currentStep: 1,
   progress: 0,
   selectedPolicyId: null,
   claimDetails: null,
@@ -30,7 +31,13 @@ function loadState(): JourneyState {
   if (typeof window === 'undefined') return INITIAL_STATE;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as JourneyState;
+    if (raw) {
+      const parsed = JSON.parse(raw) as JourneyState;
+      return {
+        ...parsed,
+        currentStep: (parsed.currentStepIndex ?? 0) + 1,
+      };
+    }
   } catch {
     // ignore corrupt storage
   }
@@ -54,6 +61,8 @@ interface JourneyContextValue {
   advanceStep: () => void;
   /** Go to a specific step by key */
   goToStep: (key: string) => void;
+  /** Set step directly by step id (1 to 8) */
+  setStep: (stepId: number) => void;
   /** Select a policy */
   selectPolicy: (policyId: string) => void;
   /** Set claim details */
@@ -109,6 +118,7 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         steps: newSteps,
         currentStepIndex: newIndex,
+        currentStep: newIndex + 1,
         progress: computeProgress(newSteps),
       };
     });
@@ -130,6 +140,31 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           steps: newSteps,
           currentStepIndex: targetIndex,
+          currentStep: targetIndex + 1,
+          progress: computeProgress(newSteps),
+        };
+      });
+    },
+    [computeProgress],
+  );
+
+  const setStep = useCallback(
+    (stepId: number) => {
+      const targetIndex = stepId - 1;
+      setState((prev) => {
+        if (targetIndex < 0 || targetIndex >= prev.steps.length) return prev;
+
+        const newSteps = prev.steps.map((step, i) => {
+          if (i < targetIndex) return { ...step, status: 'completed' as const };
+          if (i === targetIndex) return { ...step, status: 'current' as const };
+          return { ...step, status: 'upcoming' as const };
+        });
+
+        return {
+          ...prev,
+          steps: newSteps,
+          currentStepIndex: targetIndex,
+          currentStep: targetIndex + 1,
           progress: computeProgress(newSteps),
         };
       });
@@ -185,6 +220,7 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         state,
         advanceStep,
         goToStep,
+        setStep,
         selectPolicy,
         setClaimDetails,
         addDocument,

@@ -79,3 +79,17 @@ export function submitClaim(claimId: string) {
 export function fetchClaimStatus(claimId: string) {
   return request<import('@/types').Claim>(`/api/claim/${claimId}`);
 }
+
+export const api = {
+  fetchPolicies,
+  fetchPolicy,
+  sendChatMessage: (content: string, history: { role: string; content: string }[] = []) =>
+    sendChatMessage([...history.map((m) => ({ role: m.role, content: m.content })), { role: 'user', content }]),
+  explainPolicy,
+  uploadDocument,
+  verifyDocuments,
+  createClaimDraft,
+  submitClaim,
+  fetchClaimStatus,
+};
+

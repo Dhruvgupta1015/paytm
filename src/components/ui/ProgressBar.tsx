@@ -5,6 +5,8 @@ interface ProgressBarProps {
   className?: string;
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'gradient';
+  animated?: boolean;
 }
 
 const sizeClasses = {
@@ -18,6 +20,8 @@ export function ProgressBar({
   className = '',
   showLabel = true,
   size = 'md',
+  variant = 'gradient',
+  animated = true,
 }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value));
 

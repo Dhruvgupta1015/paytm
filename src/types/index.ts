@@ -98,6 +98,7 @@ export interface JourneyStep {
 export interface JourneyState {
   steps: JourneyStep[];
   currentStepIndex: number;
+  currentStep: number; // 1-indexed (1 to 8)
   progress: number;  // 0–100
   selectedPolicyId: string | null;
   claimDetails: {

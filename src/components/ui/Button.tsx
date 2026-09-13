@@ -1,12 +1,13 @@
 import React from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   isLoading?: boolean;
+  loading?: boolean;
   children: React.ReactNode;
 }
 
@@ -15,6 +16,8 @@ const variantClasses: Record<Variant, string> = {
     'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm',
   secondary:
     'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50 active:bg-indigo-100',
+  outline:
+    'bg-transparent text-indigo-700 border border-indigo-300 hover:bg-indigo-50 active:bg-indigo-100',
   ghost:
     'bg-transparent text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100',
   danger:
@@ -33,11 +36,13 @@ export function Button({
   variant = 'primary',
   size = 'md',
   isLoading = false,
+  loading = false,
   children,
   className = '',
   disabled,
   ...props
 }: ButtonProps) {
+  const isButtonLoading = isLoading || loading;
   return (
     <button
       className={`
@@ -48,10 +53,10 @@ export function Button({
         ${sizeClasses[size]}
         ${className}
       `}
-      disabled={disabled || isLoading}
+      disabled={disabled || isButtonLoading}
       {...props}
     >
-      {isLoading && (
+      {isButtonLoading && (
         <svg
           className="animate-spin h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
