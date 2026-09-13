@@ -74,6 +74,7 @@ export const ChatPanel: React.FC = () => {
         role: 'assistant',
         content: response.reply,
         timestamp: new Date().toISOString(),
+        isLiveSarvam: response.isLiveSarvam,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {

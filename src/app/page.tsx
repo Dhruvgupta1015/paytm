@@ -70,7 +70,7 @@ export default function HomePage() {
             <span>Sarvam AI Bilingual Processing</span>
             <span>•</span>
             <span className="text-emerald-600 font-bold">✓</span>
-            <span>IRDAI Human Escalation Safeguard</span>
+            <span>Human Escalation Safeguards</span>
           </div>
         </div>
 
@@ -111,7 +111,7 @@ export default function HomePage() {
               </svg>
             </div>
             <h3 className="text-base font-bold text-indigo-950 mb-1.5">
-              IRDAI Human Safeguard Desk
+              Responsible Human Safeguard Desk
             </h3>
             <p className="text-xs text-text-secondary leading-relaxed">
               Seamless human-in-the-loop escalation transfers claim context instantly to an adjudication officer whenever confidence thresholds drop.

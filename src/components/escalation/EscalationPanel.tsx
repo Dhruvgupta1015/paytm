@@ -24,7 +24,7 @@ export const EscalationPanel: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-text-secondary mt-1">
-            IRDAI Compliant human-in-the-loop escalation safeguard for high-value or ambiguous claims.
+            Responsible human-in-the-loop escalation safeguard for high-value or ambiguous claims.
           </p>
         </div>
 
@@ -145,15 +145,15 @@ export const EscalationPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Human Escalation Safeguards (Regulatory) */}
+      {/* Human Escalation Safeguards */}
       <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 leading-relaxed mb-6">
         <h5 className="font-bold text-indigo-950 mb-1 flex items-center gap-1.5">
           <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          IRDAI Customer Protection Charter — Human Oversight Mandate
+          Responsible Claims Design — Human Oversight Safeguards
         </h5>
-        FinJourney AI operates under strict Human-In-The-Loop (HITL) guidelines. Automated claim copilot suggestions are subject to human verification upon policyholder request or whenever clause interpretation involves pre-existing condition ambiguity.
+        FinJourney AI operates with human oversight safeguards. Automated claim copilot suggestions can be transferred to a human claims specialist upon policyholder request or whenever clause interpretation involves complex medical history.
       </div>
 
       {/* Return CTA */}

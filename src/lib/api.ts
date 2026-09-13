@@ -29,7 +29,7 @@ export function fetchPolicy(id: string) {
 // ─── Chat API ────────────────────────────────────────────────────
 
 export function sendChatMessage(messages: { role: string; content: string }[]) {
-  return request<{ reply: string }>('/api/chat', {
+  return request<{ reply: string; isLiveSarvam?: boolean; model?: string }>('/api/chat', {
     method: 'POST',
     body: JSON.stringify({ messages }),
   });

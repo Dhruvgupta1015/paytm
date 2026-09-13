@@ -17,6 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    console.log('[SARVAM EXPLAIN-POLICY] Requesting explanation using sarvam-30b');
     const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'sarvam-m1',
+        model: 'sarvam-30b',
         messages: [
           {
             role: 'system',
@@ -40,21 +41,28 @@ export async function POST(request: Request) {
       }),
     });
 
+    const status = res.status;
+    const rawBody = await res.text();
+    console.log(`[SARVAM EXPLAIN-POLICY] Status: ${status}, Body: ${rawBody}`);
+
     if (!res.ok) {
       return Response.json({
         explanation: generateFallbackExplanation(policy.name, clause),
+        isLiveSarvam: false,
       });
     }
 
-    const data = await res.json();
+    const data = JSON.parse(rawBody);
     const explanation =
       data.choices?.[0]?.message?.content ||
       generateFallbackExplanation(policy.name, clause);
 
-    return Response.json({ explanation });
-  } catch {
+    return Response.json({ explanation, isLiveSarvam: true });
+  } catch (err) {
+    console.error('[SARVAM EXPLAIN-POLICY] Exception:', err);
     return Response.json({
       explanation: generateFallbackExplanation(policy.name, clause),
+      isLiveSarvam: false,
     });
   }
 }

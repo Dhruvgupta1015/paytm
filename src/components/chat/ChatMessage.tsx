@@ -67,15 +67,22 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           <span className="text-[11px] font-medium text-text-muted">
             {isUser ? 'You (Rahul Sharma)' : 'FinJourney AI Copilot'}
           </span>
+          {!isUser && message.isLiveSarvam === true && (
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Sarvam API (sarvam-30b)
+            </span>
+          )}
+          {!isUser && message.isLiveSarvam === false && (
+            <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Deterministic Demo Fallback
+            </span>
+          )}
           {!isUser && isHindi && (
             <Badge variant="warning" size="sm">
-              हिन्दी / Sarvam
+              हिन्दी
             </Badge>
-          )}
-          {!isUser && !isHindi && (
-            <span className="text-[10px] text-indigo-500 font-medium">
-              Powered by Sarvam AI
-            </span>
           )}
         </div>
 

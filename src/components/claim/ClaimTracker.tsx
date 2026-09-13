@@ -29,7 +29,7 @@ export const ClaimTracker: React.FC = () => {
     },
     {
       title: 'Documents Uploaded & AI Verified',
-      subtitle: '4 of 4 documents successfully verified against IRDAI criteria',
+      subtitle: '4 of 4 required documents successfully verified',
       date: '11 Sep 2026, 11:15 AM',
       status: activeStageIndex > 1 ? 'completed' : activeStageIndex === 1 ? 'current' : 'upcoming',
     },
@@ -38,7 +38,7 @@ export const ClaimTracker: React.FC = () => {
       subtitle: 'Formal claim packet transmitted to Care Health Insurance',
       date: 'Today, Just now',
       status: activeStageIndex > 2 ? 'completed' : activeStageIndex === 2 ? 'current' : 'upcoming',
-      notes: 'IRDAI Service Level Agreement: First assessment within 48 business hours.',
+      notes: 'Standard review window: First assessment within 48 business hours.',
     },
     {
       title: 'Insurer Medical Adjudication',

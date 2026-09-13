@@ -128,7 +128,7 @@ export const ClaimDraft: React.FC = () => {
       <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-emerald-50/50 border border-indigo-100 my-6">
         <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-4 flex items-center justify-between">
           <span>Estimated Claim Settlement Breakdown</span>
-          <span className="text-[11px] font-normal text-text-muted">IRDAI Deductible Calculator</span>
+          <span className="text-[11px] font-normal text-text-muted">Standard Policy Deductibles</span>
         </h3>
 
         <div className="space-y-2 text-xs">
@@ -188,7 +188,7 @@ export const ClaimDraft: React.FC = () => {
         </div>
       </div>
 
-      {/* Mandatory Statutory Declaration */}
+      {/* User Declaration */}
       <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 mb-6">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input
@@ -198,8 +198,8 @@ export const ClaimDraft: React.FC = () => {
             className="mt-0.5 h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
           />
           <div className="text-xs text-amber-950 leading-relaxed">
-            <span className="font-bold">Statutory Declaration (IRDAI Section 45 Compliant):</span>{' '}
-            I hereby declare that all information furnished in this claim is true, correct and complete to the best of my knowledge. I understand that submitting false or misleading documents constitutes insurance fraud.
+            <span className="font-bold">User Declaration:</span>{' '}
+            I confirm the information provided above is accurate to the best of my knowledge.
           </div>
         </label>
       </div>

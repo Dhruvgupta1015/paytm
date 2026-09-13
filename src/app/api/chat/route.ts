@@ -3,10 +3,13 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) {
-    // Fallback: return a scripted response when no API key is configured
+    console.log('\n======================================================');
+    console.log('[SARVAM CHAT] No SARVAM_API_KEY configured in environment');
+    console.log('[SARVAM CHAT] Routing to deterministic fallback');
+    console.log('======================================================\n');
     const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
     const fallbackReply = generateFallbackReply(lastUserMsg?.content || '');
-    return Response.json({ reply: fallbackReply });
+    return Response.json({ reply: fallbackReply, isLiveSarvam: false, model: 'fallback-scripted' });
   }
 
   try {
@@ -24,36 +27,82 @@ IMPORTANT RULES:
 - Be warm, professional, and reassuring. Insurance claims are stressful.`,
     };
 
+    const payload = {
+      model: 'sarvam-30b',
+      messages: [systemPrompt, ...messages],
+      max_tokens: 512,
+      temperature: 0.7,
+    };
+
+    console.log('\n======================================================');
+    console.log('[SARVAM API REQUEST START]');
+    console.log('Endpoint: https://api.sarvam.ai/v1/chat/completions');
+    console.log('Model: sarvam-30b');
+    console.log('Key prefix:', apiKey.substring(0, Math.min(8, apiKey.length)) + '...');
+    console.log('Last user prompt:', messages[messages.length - 1]?.content);
+    console.log('======================================================');
+
     const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: 'sarvam-m1',
-        messages: [systemPrompt, ...messages],
-        max_tokens: 512,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(payload),
     });
 
+    const status = res.status;
+    const rawBody = await res.text();
+
+    console.log('\n======================================================');
+    console.log('[SARVAM API RAW RESPONSE]');
+    console.log(`HTTP Status Code: ${status} ${res.statusText}`);
+    console.log('Raw Response Body:', rawBody);
+    console.log('======================================================\n');
+
     if (!res.ok) {
-      const errText = await res.text();
-      console.error('Sarvam API error:', res.status, errText);
-      // Fall back to scripted response
+      console.error(`[SARVAM API ERROR] Failed with status ${status}. Triggering deterministic fallback.`);
       const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
-      return Response.json({ reply: generateFallbackReply(lastUserMsg?.content || '') });
+      return Response.json({
+        reply: generateFallbackReply(lastUserMsg?.content || ''),
+        isLiveSarvam: false,
+        httpStatus: status,
+        rawError: rawBody,
+        model: 'fallback-scripted',
+      });
     }
 
-    const data = await res.json();
+    let data: any;
+    try {
+      data = JSON.parse(rawBody);
+    } catch (parseErr) {
+      console.error('[SARVAM API] Failed to parse JSON response:', parseErr);
+      const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
+      return Response.json({
+        reply: generateFallbackReply(lastUserMsg?.content || ''),
+        isLiveSarvam: false,
+        model: 'fallback-scripted',
+      });
+    }
+
     const reply = data.choices?.[0]?.message?.content || 'I apologize, I could not process that. Could you try again?';
 
-    return Response.json({ reply });
-  } catch (error) {
-    console.error('Chat API error:', error);
+    return Response.json({
+      reply,
+      isLiveSarvam: true,
+      model: 'sarvam-30b',
+      httpStatus: 200,
+    });
+  } catch (error: any) {
+    console.error('\n======================================================');
+    console.error('[SARVAM API NETWORK / RUNTIME EXCEPTION]:', error?.message || error);
+    console.error('======================================================\n');
     const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user');
-    return Response.json({ reply: generateFallbackReply(lastUserMsg?.content || '') });
+    return Response.json({
+      reply: generateFallbackReply(lastUserMsg?.content || ''),
+      isLiveSarvam: false,
+      model: 'fallback-scripted',
+    });
   }
 }
 

@@ -124,6 +124,7 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   timestamp: string;
+  isLiveSarvam?: boolean;
 }
 
 // ─── Escalation Types ────────────────────────────────────────────

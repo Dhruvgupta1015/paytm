@@ -101,7 +101,7 @@ export const VerificationChecklist: React.FC<VerificationChecklistProps> = ({
             </Badge>
           </h3>
           <p className="text-xs text-text-secondary mt-0.5">
-            Automated compliance check against IRDAI health claim guidelines
+            Automated verification check against standard required claim documents
           </p>
         </div>
       </div>
