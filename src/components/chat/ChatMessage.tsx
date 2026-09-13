@@ -70,7 +70,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           {!isUser && message.isLiveSarvam === true && (
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live Sarvam API (sarvam-30b)
+              Live Sarvam API (sarvam-105b-conversations)
             </span>
           )}
           {!isUser && message.isLiveSarvam === false && (
@@ -116,7 +116,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </div>
 
         {/* Timestamp */}
-        <span className="text-[10px] text-text-muted mt-1 px-1">
+        <span suppressHydrationWarning className="text-[10px] text-text-muted mt-1 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',

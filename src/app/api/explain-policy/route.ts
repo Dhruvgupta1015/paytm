@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    console.log('[SARVAM EXPLAIN-POLICY] Requesting explanation using sarvam-30b');
+    console.log('[SARVAM EXPLAIN-POLICY] Requesting explanation using sarvam-105b-conversations');
     const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'sarvam-30b',
+        model: 'sarvam-105b-conversations',
         messages: [
           {
             role: 'system',

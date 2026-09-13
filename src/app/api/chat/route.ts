@@ -28,16 +28,16 @@ IMPORTANT RULES:
     };
 
     const payload = {
-      model: 'sarvam-30b',
+      model: 'sarvam-105b-conversations',
       messages: [systemPrompt, ...messages],
-      max_tokens: 512,
+      max_tokens: 1024,
       temperature: 0.7,
     };
 
     console.log('\n======================================================');
     console.log('[SARVAM API REQUEST START]');
     console.log('Endpoint: https://api.sarvam.ai/v1/chat/completions');
-    console.log('Model: sarvam-30b');
+    console.log('Model: sarvam-105b-conversations');
     console.log('Key prefix:', apiKey.substring(0, Math.min(8, apiKey.length)) + '...');
     console.log('Last user prompt:', messages[messages.length - 1]?.content);
     console.log('======================================================');
@@ -45,7 +45,7 @@ IMPORTANT RULES:
     const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
@@ -85,12 +85,16 @@ IMPORTANT RULES:
       });
     }
 
-    const reply = data.choices?.[0]?.message?.content || 'I apologize, I could not process that. Could you try again?';
+    const choiceMsg = data.choices?.[0]?.message;
+    const reply =
+      choiceMsg?.content ||
+      choiceMsg?.reasoning_content ||
+      'I apologize, I could not process that. Could you try again?';
 
     return Response.json({
       reply,
       isLiveSarvam: true,
-      model: 'sarvam-30b',
+      model: 'sarvam-105b-conversations',
       httpStatus: 200,
     });
   } catch (error: any) {
