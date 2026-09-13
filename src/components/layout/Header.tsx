@@ -12,9 +12,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30">
-      {/* Synthetic Data Disclaimer */}
-      <div className="disclaimer-banner">
-        ⚠️ DEMO MODE — All data shown is synthetic. No real insurance claims or policies are being processed.
+      {/* Synthetic Data & IRDAI Regulatory Disclaimer */}
+      <div className="disclaimer-banner text-[11px] font-medium py-1 text-center bg-amber-500 text-amber-950 border-b border-amber-600/30">
+        ⚠️ IRDAI / REGULATORY SANDBOX PROTOTYPE — All insurance policies, hospital data, and claims are synthetic demo records.
       </div>
 
       {/* Main header bar */}

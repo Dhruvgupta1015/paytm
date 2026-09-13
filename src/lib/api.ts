@@ -53,10 +53,10 @@ export function uploadDocument(fileName: string, fileType: string) {
   });
 }
 
-export function verifyDocuments(documentIds: string[]) {
+export function verifyDocuments(documents: import('@/types').ClaimDocument[] | string[]) {
   return request<{ documents: import('@/types').ClaimDocument[] }>('/api/documents/verify', {
     method: 'POST',
-    body: JSON.stringify({ documentIds }),
+    body: JSON.stringify({ documents }),
   });
 }
 
