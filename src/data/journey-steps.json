@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "id": 1,
+      "key": "intent",
+      "label": "Tell us what happened",
+      "description": "Describe your medical situation and claim intent"
+    },
+    {
+      "id": 2,
+      "key": "policy",
+      "label": "Select your policy",
+      "description": "Choose the insurance policy for this claim"
+    },
+    {
+      "id": 3,
+      "key": "details",
+      "label": "Provide claim details",
+      "description": "Enter hospital, dates, and billing information"
+    },
+    {
+      "id": 4,
+      "key": "documents",
+      "label": "Upload documents",
+      "description": "Upload required documents for verification"
+    },
+    {
+      "id": 5,
+      "key": "verify",
+      "label": "Document verification",
+      "description": "We verify your uploaded documents"
+    },
+    {
+      "id": 6,
+      "key": "draft",
+      "label": "Review claim draft",
+      "description": "Review the complete claim before submission"
+    },
+    {
+      "id": 7,
+      "key": "submit",
+      "label": "Approve & submit",
+      "description": "Give explicit approval to submit your claim"
+    },
+    {
+      "id": 8,
+      "key": "tracking",
+      "label": "Track your claim",
+      "description": "Monitor the status of your submitted claim"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "POL-HEALTH-001",
+    "name": "Paytm Health Secure Plus",
+    "type": "health",
+    "provider": "Demo Insurance Co.",
+    "premium": 12000,
+    "sumInsured": 500000,
+    "status": "active",
+    "holder": {
+      "name": "Rahul Sharma",
+      "age": 32,
+      "memberId": "MEM-2024-78432"
+    },
+    "coverage": {
+      "hospitalization": true,
+      "daycare": true,
+      "preHospitalization": "30 days",
+      "postHospitalization": "60 days",
+      "ambulance": 2500,
+      "roomRent": "Single AC — up to ₹5,000/day"
+    },
+    "exclusions": [
+      "Pre-existing conditions (first 2 years)",
+      "Cosmetic surgery",
+      "Self-inflicted injuries"
+    ],
+    "claimProcess": [
+      "Inform insurer within 24 hours of hospitalization",
+      "Submit discharge summary + bills within 15 days",
+      "Cashless available at network hospitals"
+    ],
+    "networkHospitals": ["Apollo Delhi", "Max Saket", "Fortis Gurgaon"]
+  },
+  {
+    "id": "POL-HEALTH-002",
+    "name": "Paytm Family Shield",
+    "type": "health",
+    "provider": "Demo Insurance Co.",
+    "premium": 22000,
+    "sumInsured": 1000000,
+    "status": "active",
+    "holder": {
+      "name": "Rahul Sharma",
+      "age": 32,
+      "memberId": "MEM-2024-78432"
+    },
+    "coverage": {
+      "hospitalization": true,
+      "daycare": true,
+      "preHospitalization": "60 days",
+      "postHospitalization": "90 days",
+      "ambulance": 5000,
+      "roomRent": "No sub-limit"
+    },
+    "exclusions": [
+      "Pre-existing conditions (first 4 years)",
+      "Adventure sports injuries"
+    ],
+    "claimProcess": [
+      "Inform insurer within 48 hours",
+      "Submit all documents within 30 days",
+      "Cashless at 5000+ network hospitals"
+    ],
+    "networkHospitals": ["Apollo Delhi", "Max Saket", "Fortis Gurgaon", "AIIMS (reimbursement only)"]
+  }
+]
