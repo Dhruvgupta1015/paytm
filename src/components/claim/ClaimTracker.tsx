@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { N8nWorkflowVisualizer } from '@/components/workflow/N8nWorkflowVisualizer';
+import { EvidenceVerificationCard } from '@/components/journey/EvidenceVerificationCard';
 
 interface Stage {
   title: string;
@@ -233,6 +234,9 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
           );
         })}
       </div>
+
+      {/* ─── Evidence & Verification Summary (Why was this claim routed this way?) ─── */}
+      <EvidenceVerificationCard compact={true} className="mb-6" />
 
       {/* ─── n8n Orchestration Workflow Visualizer ────────────────── */}
       <N8nWorkflowVisualizer

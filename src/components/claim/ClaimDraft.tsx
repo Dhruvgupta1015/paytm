@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { ExplainMoneyModal } from '@/components/claim/ExplainMoneyModal';
 import { ContradictionCard } from '@/components/journey/ContradictionCard';
+import { EvidenceVerificationCard } from '@/components/journey/EvidenceVerificationCard';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -190,30 +191,8 @@ export const ClaimDraft: React.FC = () => {
         </div>
       </div>
 
-      {/* Uploaded Documents List */}
-      <div className="mb-6">
-        <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider mb-2">
-          Attached Verified Documents
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
-            <span className="text-emerald-600 font-bold">✓</span>
-            <span className="truncate">discharge_summary_apollo.pdf</span>
-          </div>
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
-            <span className="text-emerald-600 font-bold">✓</span>
-            <span className="truncate">hospital_final_bill_85000.pdf</span>
-          </div>
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
-            <span className="text-emerald-600 font-bold">✓</span>
-            <span className="truncate">aadhaar_rahul_sharma.pdf</span>
-          </div>
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
-            <span className="text-emerald-600 font-bold">✓</span>
-            <span className="truncate">doctor_dengue_treatment_rx.pdf</span>
-          </div>
-        </div>
-      </div>
+      {/* Evidence & Verification View */}
+      <EvidenceVerificationCard className="mb-6" />
 
       {/* Contradiction Blocking Warning */}
       {isSubmissionBlocked && (
