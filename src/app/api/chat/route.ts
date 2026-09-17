@@ -129,7 +129,21 @@ function generateFallbackReply(userMessage: string): string {
     return "You can track your claim status on the Claim Tracking page. Once submitted, you'll receive a claim ID and can monitor each stage of the review process.";
   }
 
-  if (lower.includes('hindi') || lower.includes('हिंदी') || lower.includes('मुझे') || lower.includes('मेरा')) {
+  if (
+    lower.includes('78,500') ||
+    lower.includes('78500') ||
+    lower.includes('6,500') ||
+    lower.includes('6500') ||
+    lower.includes('deduct') ||
+    lower.includes('why') && (lower.includes('money') || lower.includes('payable') || lower.includes('payout'))
+  ) {
+    return "Here is your estimated payout breakdown: Out of the ₹85,000 gross hospital bill, ₹6,500 was deducted for standard non-medical consumables (PPE kits, admission file charges, and patient comfort kits). The remaining ₹78,500 is your estimated payable amount under your active policy. Please note this is an estimated calculation, not a final guarantee.";
+  }
+
+  if (lower.includes('hindi') || lower.includes('हिंदी') || lower.includes('मुझे') || lower.includes('मेरा') || lower.includes('पैसे') || lower.includes('कटौती')) {
+    if (lower.includes('कटौती') || lower.includes('पैसे') || lower.includes('6500') || lower.includes('78500')) {
+      return "आपके ₹85,000 के कुल अस्पताल बिल में से ₹6,500 की कटौती मानक गैर-चिकित्सा वस्तुओं (जैसे दस्ताने, पीपीई किट, फ़ाइल शुल्क) के लिए की गई है। इसके बाद आपकी अनुमानित देय राशि ₹78,500 बनती है। कृपया ध्यान दें कि यह एक अनुमानित गणना है।";
+    }
     return "जी हाँ, मैं हिंदी में भी आपकी मदद कर सकता हूँ! बताइए, आपको किस तरह की सहायता चाहिए — क्या आप health insurance claim file करना चाहते हैं?";
   }
 
@@ -139,3 +153,4 @@ function generateFallbackReply(userMessage: string): string {
 
   return "I'm here to help you with your health insurance claim journey. Could you tell me more about your situation? For example, you can describe your hospitalization, ask about your policy coverage, or let me know where you are in the claim process.";
 }
+

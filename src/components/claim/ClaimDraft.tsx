@@ -5,15 +5,21 @@ import { useJourney } from '@/context/JourneyContext';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import { ExplainMoneyModal } from '@/components/claim/ExplainMoneyModal';
+import { ContradictionCard } from '@/components/journey/ContradictionCard';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export const ClaimDraft: React.FC = () => {
-  const { state, setClaimId, goToStep } = useJourney();
+  const { state, twin, setClaimId, goToStep, setMismatchScenario } = useJourney();
   const router = useRouter();
   const [isDeclarationChecked, setIsDeclarationChecked] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExplainMoneyOpen, setIsExplainMoneyOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const blockingContradictions = twin.contradictions.filter((c) => c.severity === 'BLOCKING');
+  const isSubmissionBlocked = blockingContradictions.length > 0;
 
   const claimId = state.claimId || 'CLM-2026-00142';
 
@@ -152,14 +158,35 @@ export const ClaimDraft: React.FC = () => {
             <span className="text-indigo-950">Gross Hospital Bill:</span>
             <span className="text-indigo-950">₹85,000</span>
           </div>
-          <div className="flex justify-between py-1.5 text-amber-800">
-            <span>Less: Non-Medical Consumables & Admin Charges:</span>
-            <span>- ₹6,500</span>
+          <div className="flex justify-between items-center py-1.5 text-amber-800">
+            <div className="flex items-center gap-1.5">
+              <span>Less: Non-Medical Consumables & Admin Charges:</span>
+              <button
+                type="button"
+                onClick={() => setIsExplainMoneyOpen(true)}
+                className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                title="Inspect why ₹6,500 was deducted"
+              >
+                <span>💡 Why ₹6,500?</span>
+              </button>
+            </div>
+            <span className="font-mono font-semibold">- ₹6,500</span>
           </div>
           <div className="flex justify-between pt-3 border-t-2 border-indigo-200 text-sm sm:text-base font-extrabold text-indigo-950">
             <span className="text-indigo-900">Estimated Payable Amount:</span>
             <span className="text-emerald-600 font-mono text-lg">₹78,500</span>
           </div>
+        </div>
+
+        <div className="mt-3 pt-2.5 border-t border-indigo-100 flex items-center justify-between text-xs">
+          <span className="text-text-muted">Need a step-by-step breakdown of your payout?</span>
+          <button
+            type="button"
+            onClick={() => setIsExplainMoneyOpen(true)}
+            className="text-indigo-600 hover:text-indigo-800 font-semibold underline text-xs cursor-pointer inline-flex items-center gap-1"
+          >
+            <span>Explain My Money →</span>
+          </button>
         </div>
       </div>
 
@@ -185,6 +212,76 @@ export const ClaimDraft: React.FC = () => {
             <span className="text-emerald-600 font-bold">✓</span>
             <span className="truncate">doctor_dengue_treatment_rx.pdf</span>
           </div>
+        </div>
+      </div>
+
+      {/* Contradiction Blocking Warning */}
+      {isSubmissionBlocked && (
+        <div className="mb-6 space-y-3">
+          <div className="p-3.5 rounded-xl bg-red-100/90 border border-red-300 text-red-900 text-xs font-bold flex items-center gap-2 shadow-xs">
+            <span className="text-base">🚫</span>
+            <span>
+              Claim Submission Blocked: An unresolved document contradiction must be reconciled before submitting.
+            </span>
+          </div>
+          <ContradictionCard
+            contradiction={blockingContradictions[0]}
+            onResolve={() => setMismatchScenario('none')}
+          />
+        </div>
+      )}
+
+      {/* Demo Contradiction Simulator (Opt-in only; protects canonical happy path) */}
+      <div className="mb-6 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-bold text-text-muted uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <span>🧪 Contradiction Detector Demo:</span>
+            <span className="normal-case font-normal text-slate-500">
+              {isSubmissionBlocked
+                ? 'Submission is currently BLOCKED by discrepancy'
+                : 'Canonical happy path active (0 contradictions)'}
+            </span>
+          </span>
+          {isSubmissionBlocked && (
+            <span className="text-red-700 font-bold text-[10px] bg-red-100 px-2 py-0.5 rounded border border-red-300">
+              BLOCKING Active
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setMismatchScenario('none')}
+            className={`py-1.5 px-3 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+              !state.activeMismatchScenario || state.activeMismatchScenario === 'none'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold shadow-xs'
+                : 'bg-white text-text-secondary border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            ✓ Normal (0 Issues)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMismatchScenario('date_mismatch')}
+            className={`py-1.5 px-3 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+              state.activeMismatchScenario === 'date_mismatch'
+                ? 'bg-red-50 text-red-800 border-red-300 font-bold shadow-xs'
+                : 'bg-white text-text-secondary border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            ⚠️ Date Mismatch (Discharge)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMismatchScenario('amount_mismatch')}
+            className={`py-1.5 px-3 rounded-lg font-medium text-xs border transition-all cursor-pointer ${
+              state.activeMismatchScenario === 'amount_mismatch'
+                ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold shadow-xs'
+                : 'bg-white text-text-secondary border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            ⚠️ Amount Mismatch (Invoice)
+          </button>
         </div>
       </div>
 
@@ -218,14 +315,22 @@ export const ClaimDraft: React.FC = () => {
         <Button
           variant="primary"
           size="lg"
-          disabled={!isDeclarationChecked || isSubmitting}
+          disabled={!isDeclarationChecked || isSubmitting || isSubmissionBlocked}
           onClick={() => setIsModalOpen(true)}
-          className="w-full sm:w-auto shadow-md bg-indigo-600 hover:bg-indigo-700 px-8"
+          className={`w-full sm:w-auto shadow-md px-8 ${
+            isSubmissionBlocked
+              ? 'bg-gray-400 cursor-not-allowed text-white hover:bg-gray-400'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          }`}
         >
-          <span>I Approve & Submit This Claim</span>
-          <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+          <span>
+            {isSubmissionBlocked ? 'Submission Blocked by Discrepancy' : 'I Approve & Submit This Claim'}
+          </span>
+          {!isSubmissionBlocked && (
+            <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
         </Button>
       </div>
 
@@ -254,7 +359,7 @@ export const ClaimDraft: React.FC = () => {
             </div>
           </div>
           <p className="text-xs text-text-secondary">
-            Note: This claim will enter the regulatory review pipeline. A formal notification SMS and Email will be dispatched.
+            Note: This claim will enter the insurer review pipeline. Notification message prepared — Demo simulation. No live SMS or email is dispatched.
           </p>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -277,6 +382,13 @@ export const ClaimDraft: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Explain My Money Modal */}
+      <ExplainMoneyModal
+        isOpen={isExplainMoneyOpen}
+        onClose={() => setIsExplainMoneyOpen(false)}
+        financialSummary={state.twin?.financialSummary}
+      />
     </div>
   );
 };

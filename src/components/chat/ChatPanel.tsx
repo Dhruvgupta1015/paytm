@@ -194,6 +194,13 @@ export const ChatPanel: React.FC = () => {
               window.location.href = '/claim/draft';
             },
           },
+          {
+            label: '💡 Why ₹78,500? Explain Deductions',
+            variant: 'outline',
+            action: () => {
+              handleSendMessage('Why was ₹6,500 deducted from my ₹85,000 bill? Explain my payout calculation.');
+            },
+          },
         ];
 
       case 8: // Tracking

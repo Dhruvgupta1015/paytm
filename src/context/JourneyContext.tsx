@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
-import type { JourneyState, JourneyStep, JourneyStepStatus, ClaimDocument } from '@/types';
+import type { JourneyState, JourneyStep, JourneyStepStatus, ClaimDocument, FinancialJourneyTwin } from '@/types';
 import journeyStepsData from '@/data/journey-steps.json';
+import { deriveJourneyTwin } from '@/lib/twin-engine';
 
 // ─── Default State ───────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ function buildInitialSteps(): JourneyStep[] {
   }));
 }
 
-const INITIAL_STATE: JourneyState = {
+const BASE_INITIAL_STATE: JourneyState = {
   steps: buildInitialSteps(),
   currentStepIndex: 0,
   currentStep: 1,
@@ -23,9 +24,23 @@ const INITIAL_STATE: JourneyState = {
   documents: [],
   claimId: null,
   claimStatus: null,
+  activeMismatchScenario: 'none',
+  simulateLowConfidence: false,
+};
+
+const INITIAL_STATE: JourneyState = {
+  ...BASE_INITIAL_STATE,
+  twin: deriveJourneyTwin(BASE_INITIAL_STATE),
 };
 
 const STORAGE_KEY = 'finjourney_state';
+
+function withTwin(state: JourneyState): JourneyState {
+  return {
+    ...state,
+    twin: deriveJourneyTwin(state),
+  };
+}
 
 function loadState(): JourneyState {
   if (typeof window === 'undefined') return INITIAL_STATE;
@@ -33,10 +48,11 @@ function loadState(): JourneyState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as JourneyState;
-      return {
+      const normalized: JourneyState = {
         ...parsed,
         currentStep: (parsed.currentStepIndex ?? 0) + 1,
       };
+      return withTwin(normalized);
     }
   } catch {
     // ignore corrupt storage
@@ -57,6 +73,8 @@ function saveState(state: JourneyState) {
 
 interface JourneyContextValue {
   state: JourneyState;
+  /** Complete Financial Journey Twin state */
+  twin: FinancialJourneyTwin;
   /** Advance to the next step (triggered by explicit UI action only) */
   advanceStep: () => void;
   /** Go to a specific step by key */
@@ -75,6 +93,10 @@ interface JourneyContextValue {
   setClaimId: (id: string) => void;
   /** Set claim status */
   setClaimStatus: (status: JourneyState['claimStatus']) => void;
+  /** Set demo mismatch scenario for testing contradictions (opt-in only) */
+  setMismatchScenario: (scenario: 'none' | 'date_mismatch' | 'amount_mismatch') => void;
+  /** Toggle low AI confidence simulation to demonstrate human escalation path */
+  setSimulateLowConfidence: (val: boolean) => void;
   /** Reset entire journey */
   resetJourney: () => void;
 }
@@ -114,13 +136,13 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         return step;
       });
       const newIndex = currentStepIndex + 1;
-      return {
+      return withTwin({
         ...prev,
         steps: newSteps,
         currentStepIndex: newIndex,
         currentStep: newIndex + 1,
         progress: computeProgress(newSteps),
-      };
+      });
     });
   }, [computeProgress]);
 
@@ -136,13 +158,13 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
           return step;
         });
 
-        return {
+        return withTwin({
           ...prev,
           steps: newSteps,
           currentStepIndex: targetIndex,
           currentStep: targetIndex + 1,
           progress: computeProgress(newSteps),
-        };
+        });
       });
     },
     [computeProgress],
@@ -160,64 +182,94 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
           return { ...step, status: 'upcoming' as const };
         });
 
-        return {
+        return withTwin({
           ...prev,
           steps: newSteps,
           currentStepIndex: targetIndex,
           currentStep: targetIndex + 1,
           progress: computeProgress(newSteps),
-        };
+        });
       });
     },
     [computeProgress],
   );
 
   const selectPolicy = useCallback((policyId: string) => {
-    setState((prev) => ({ ...prev, selectedPolicyId: policyId }));
+    setState((prev) => withTwin({ ...prev, selectedPolicyId: policyId }));
   }, []);
 
   const setClaimDetails = useCallback((details: JourneyState['claimDetails']) => {
-    setState((prev) => ({ ...prev, claimDetails: details }));
+    setState((prev) => withTwin({ ...prev, claimDetails: details }));
   }, []);
 
   const addDocument = useCallback((doc: ClaimDocument) => {
-    setState((prev) => ({
-      ...prev,
-      documents: [...prev.documents, doc],
-    }));
+    setState((prev) =>
+      withTwin({
+        ...prev,
+        documents: [...prev.documents, doc],
+      })
+    );
   }, []);
 
   const updateDocumentStatus = useCallback(
     (docId: string, status: ClaimDocument['status'], reason?: string) => {
-      setState((prev) => ({
-        ...prev,
-        documents: prev.documents.map((d) =>
-          d.id === docId ? { ...d, status, reason } : d,
-        ),
-      }));
+      setState((prev) =>
+        withTwin({
+          ...prev,
+          documents: prev.documents.map((d) =>
+            d.id === docId ? { ...d, status, reason } : d
+          ),
+        })
+      );
     },
-    [],
+    []
   );
 
   const setClaimId = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, claimId: id }));
+    setState((prev) => withTwin({ ...prev, claimId: id }));
   }, []);
 
   const setClaimStatus = useCallback((status: JourneyState['claimStatus']) => {
-    setState((prev) => ({ ...prev, claimStatus: status }));
+    setState((prev) => withTwin({ ...prev, claimStatus: status }));
+  }, []);
+
+  const setMismatchScenario = useCallback(
+    (scenario: 'none' | 'date_mismatch' | 'amount_mismatch') => {
+      setState((prev) => withTwin({ ...prev, activeMismatchScenario: scenario }));
+    },
+    []
+  );
+
+  const setSimulateLowConfidence = useCallback((val: boolean) => {
+    setState((prev) => withTwin({ ...prev, simulateLowConfidence: val }));
   }, []);
 
   const resetJourney = useCallback(() => {
     setState(INITIAL_STATE);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('finjourney_n8n_exec_')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      } catch {
+        // Safe fallback for restricted storage environments
+      }
     }
   }, []);
+
+  const activeTwin = state.twin || deriveJourneyTwin(state);
 
   return (
     <JourneyContext.Provider
       value={{
         state,
+        twin: activeTwin,
         advanceStep,
         goToStep,
         setStep,
@@ -227,6 +279,8 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         updateDocumentStatus,
         setClaimId,
         setClaimStatus,
+        setMismatchScenario,
+        setSimulateLowConfidence,
         resetJourney,
       }}
     >

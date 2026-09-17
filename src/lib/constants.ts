@@ -10,6 +10,8 @@ export const ROUTES = {
   CLAIM_TRACKING: '/claim/tracking',
   ESCALATION: '/escalation',
   PROFILE: '/profile',
+  LOGIN: '/login',
+  OFFICER: '/officer',
 } as const;
 
 // Journey step keys (match journey-steps.json)

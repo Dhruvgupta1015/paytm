@@ -5,6 +5,7 @@ import { useJourney } from '@/context/JourneyContext';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
+import { N8nWorkflowVisualizer } from '@/components/workflow/N8nWorkflowVisualizer';
 
 interface Stage {
   title: string;
@@ -17,6 +18,16 @@ interface Stage {
 export const ClaimTracker: React.FC = () => {
   const { state } = useJourney();
   const claimId = state.claimId || 'CLM-2026-00142';
+  const twin = state.twin;
+
+  const readinessScore = twin?.readiness?.overallScore ?? 92;
+  const contradictionCount = twin?.contradictions?.length ?? 0;
+  const grossAmount = twin?.financialSummary?.grossHospitalBill ?? 85000;
+  const deductions = twin?.financialSummary?.deductibles ?? 6500;
+  const estimatedPayable = twin?.financialSummary?.estimatedPayable ?? 78500;
+  const customerName = twin?.customer?.name || 'Rahul Sharma';
+  const policyNumber = twin?.policy?.id || 'POL-HEALTH-001';
+  const hospitalName = twin?.hospital?.name || 'Apollo Hospital, Delhi';
 
   const [activeStageIndex, setActiveStageIndex] = useState(2); // 0-indexed: 0=Initiated, 1=Docs Verified, 2=Submitted for Review, 3=Insurer Adjudication, 4=Settlement
 
@@ -68,7 +79,7 @@ Policy ID: POL-HEALTH-001 (Paytm Health Secure Plus)
 Hospital: Apollo Hospital, Delhi
 Estimated Payable: ₹78,500
 Status: Submitted for Review
-Statutory Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
+Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
 
     const blob = new Blob([textContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -222,6 +233,20 @@ Statutory Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
           );
         })}
       </div>
+
+      {/* ─── n8n Orchestration Workflow Visualizer ────────────────── */}
+      <N8nWorkflowVisualizer
+        claimId={claimId}
+        readinessScore={readinessScore}
+        contradictionCount={contradictionCount}
+        grossAmount={grossAmount}
+        deductions={deductions}
+        estimatedPayable={estimatedPayable}
+        customerName={customerName}
+        policyNumber={policyNumber}
+        hospitalName={hospitalName}
+        autoRunOnMount={true}
+      />
 
       {/* Footer Navigation */}
       <div className="pt-6 border-t border-indigo-100/80 flex flex-col sm:flex-row items-center justify-between gap-3">

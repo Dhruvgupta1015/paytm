@@ -84,7 +84,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
           <h3 className="text-base font-bold text-indigo-950 flex items-center gap-2">
             <span>Upload Supporting Documents</span>
             <Badge variant="indigo" size="sm">
-              Simulated OCR & Parser
+              Simulated Verification & Parser
             </Badge>
           </h3>
           <p className="text-xs text-text-secondary mt-0.5">

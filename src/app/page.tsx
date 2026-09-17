@@ -60,6 +60,19 @@ export default function HomePage() {
                 View Customer Policies & Profile
               </Button>
             </Link>
+
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-sm font-semibold border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+              >
+                <span>Demo Sign In</span>
+                <svg className="w-4 h-4 ml-1.5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+              </Button>
+            </Link>
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-xs text-text-muted">
@@ -161,7 +174,7 @@ export default function HomePage() {
               <span className="text-xs font-bold text-indigo-700 block mb-1">Step 4 & 5</span>
               <h4 className="text-sm font-bold text-indigo-950 mb-1">Document Verification</h4>
               <p className="text-[11px] text-text-secondary">
-                Upload discharge summary, final bills, Aadhaar & prescription with live OCR checks.
+                Upload discharge summary, final bills, Aadhaar & prescription with live automated checks.
               </p>
             </div>
 
@@ -175,7 +188,7 @@ export default function HomePage() {
               <span className="text-xs font-bold text-indigo-700 block mb-1">Step 6 & 7</span>
               <h4 className="text-sm font-bold text-indigo-950 mb-1">Claim Draft & Approval</h4>
               <p className="text-[11px] text-text-secondary">
-                Breakdown of ₹85,000 bill, ₹78,500 payable, statutory declaration & user submit.
+                Breakdown of ₹85,000 bill, ₹78,500 payable, user declaration & claim approval.
               </p>
             </div>
 

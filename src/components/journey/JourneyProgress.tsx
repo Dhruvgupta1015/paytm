@@ -5,6 +5,7 @@ import { useJourney } from '@/context/JourneyContext';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { JourneyTwinCard } from '@/components/journey/JourneyTwinCard';
 import Link from 'next/link';
 
 interface JourneyProgressProps {
@@ -50,7 +51,7 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ compact = fals
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-6">
+      <div className="mb-4">
         <ProgressBar
           value={state.progress}
           variant="gradient"
@@ -66,6 +67,11 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ compact = fals
           </span>
           <span>Settlement</span>
         </div>
+      </div>
+
+      {/* Financial Journey Twin & Readiness Layer */}
+      <div className="mb-4">
+        <JourneyTwinCard />
       </div>
 
       {/* Steps Checklist */}

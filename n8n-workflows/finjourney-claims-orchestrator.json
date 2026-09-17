@@ -1,0 +1,319 @@
+{
+  "name": "FinJourney AI - Claims Workflow Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finjourney-claim",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-trigger",
+      "name": "Claim Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "finjourney-claims-inbound"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Validate and sanitize incoming claim dossier\nconst input = $input.first().json.body || $input.first().json;\n\nconst claimId = input.claimId || `CLM-2026-${String(Math.floor(10000 + Math.random() * 90000))}`;\nconst readinessScore = typeof input.readinessScore === 'number' ? input.readinessScore : 92;\nconst contradictions = Array.isArray(input.contradictions) ? input.contradictions : [];\nconst grossAmount = input.grossAmount || 85000;\nconst deductions = input.deductions || 6500;\nconst estimatedPayable = input.estimatedPayable || (grossAmount - deductions);\nconst customerName = input.customerName || 'Rahul Sharma';\nconst hospitalName = input.hospitalName || 'Apollo Hospital, Delhi';\nconst memberId = input.memberId || 'MEM-2024-78432';\nconst policyNumber = input.policyNumber || 'POL-HEALTH-001';\n\nreturn [{\n  json: {\n    claimId,\n    readinessScore,\n    contradictions,\n    contradictionCount: contradictions.length,\n    grossAmount,\n    deductions,\n    estimatedPayable,\n    customerName,\n    hospitalName,\n    memberId,\n    policyNumber,\n    receivedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-validate-payload",
+      "name": "Validate Claim Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 2: AI Triage & Readiness Assessment\nconst item = $input.first().json;\n\nlet triageRoute = 'STANDARD_REVIEW';\nlet triageReason = 'Standard adjudication workflow for complete reimbursement packet.';\nlet priority = 'Medium';\n\nif (item.contradictionCount > 0) {\n  triageRoute = 'HUMAN_REVIEW';\n  triageReason = `Blocking discrepancy flagged: ${item.contradictionCount} cross-document contradiction detected. Mandatory human adjudicator inspection.`;\n  priority = 'Critical';\n} else if (item.readinessScore >= 90) {\n  triageRoute = 'FAST_TRACK';\n  triageReason = `High-confidence complete dossier (Readiness: ${item.readinessScore}%). Fast-track queue eligible for expedited insurer review.`;\n  priority = 'High';\n}\n\nreturn [{\n  json: {\n    ...item,\n    triageRoute,\n    triageReason,\n    priority,\n    triageScore: item.readinessScore\n  }\n}];"
+      },
+      "id": "node-ai-triage",
+      "name": "AI Triage & Readiness Assessment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "human-review-condition",
+              "leftValue": "={{ $json.triageRoute }}",
+              "rightValue": "HUMAN_REVIEW",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-check-human-review",
+      "name": "Is Human Review Required?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fast-track-condition",
+              "leftValue": "={{ $json.triageRoute }}",
+              "rightValue": "FAST_TRACK",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-check-fast-track",
+      "name": "Is Fast Track Eligible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Branch 1: Route to Human Claims Officer Desk\nconst item = $input.first().json;\n\nreturn [{\n  json: {\n    ...item,\n    selectedRoute: 'HUMAN_REVIEW',\n    queueName: 'Human Escalation Queue',\n    assignedOfficer: 'Priya Verma (Senior Claims Adjudicator)',\n    officerBadge: 'Paytm Insurance Officer #9042',\n    slaTarget: '4 hours',\n    routingAction: 'Escalated to human adjudication desk with discrepancy audit packet.'\n  }\n}];"
+      },
+      "id": "node-human-review-branch",
+      "name": "Human Review Branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Branch 2: Fast-Track Adjudication Queue\nconst item = $input.first().json;\n\nreturn [{\n  json: {\n    ...item,\n    selectedRoute: 'FAST_TRACK',\n    queueName: 'Expedited Review Queue',\n    assignedOfficer: 'Automated Triaged Pipeline',\n    slaTarget: '24 hours',\n    routingAction: 'Fast-track priority assigned for verified clinical packet.'\n  }\n}];"
+      },
+      "id": "node-fast-track-branch",
+      "name": "Fast Track Branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Branch 3: Standard Review Queue\nconst item = $input.first().json;\n\nreturn [{\n  json: {\n    ...item,\n    selectedRoute: 'STANDARD_REVIEW',\n    queueName: 'Standard Claims Queue',\n    assignedOfficer: 'General Adjudication Pool',\n    slaTarget: '48 business hours',\n    routingAction: 'Enqueued for standard claims assessment.'\n  }\n}];"
+      },
+      "id": "node-standard-review-branch",
+      "name": "Standard Review Branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 4: Policyholder Notification Preparation\nconst item = $input.first().json;\n\nconst formattedAmount = `₹${item.estimatedPayable.toLocaleString('en-IN')}`;\nconst messageBody = `Your claim ${item.claimId} has been submitted for insurer review. Estimated claim amount: ${formattedAmount}. Please note that this is a prototype demo estimate.`;\n\nreturn [{\n  json: {\n    ...item,\n    notification: {\n      status: 'Notification Prepared — Demo',\n      recipient: item.customerName,\n      channel: 'SMS / In-App Message (Demo Simulation)',\n      headline: 'Claim Ingestion Acknowledgment',\n      message: messageBody,\n      dispatchedAt: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "node-notification-prep",
+      "name": "Prepare Policyholder Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 5: Hospital Billing Dossier Preparation\nconst item = $input.first().json;\n\nreturn [{\n  json: {\n    ...item,\n    hospitalDossier: {\n      status: 'Hospital Sync Payload Prepared — Demo',\n      facility: item.hospitalName,\n      patientMemberId: item.memberId,\n      invoicedAmount: `₹${item.grossAmount.toLocaleString('en-IN')}`,\n      excludedConsumables: `₹${item.deductions.toLocaleString('en-IN')}`,\n      packetStatus: 'Synchronized with hospital billing desk test gateway',\n      preparedAt: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "node-hospital-dossier",
+      "name": "Prepare Hospital Dossier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 6: Immutable Audit Record Generation\nconst item = $input.first().json;\nconst executionId = `N8N-EXEC-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;\n\nconst auditRecord = {\n  executionId,\n  claimId: item.claimId,\n  policyNumber: item.policyNumber,\n  customerName: item.customerName,\n  readinessScore: item.readinessScore,\n  contradictionCount: item.contradictionCount,\n  selectedRoute: item.selectedRoute,\n  priority: item.priority,\n  workflowStatus: 'ORCHESTRATION_COMPLETED',\n  timestamp: new Date().toISOString()\n};\n\nreturn [{\n  json: {\n    ...item,\n    executionId,\n    auditRecord\n  }\n}];"
+      },
+      "id": "node-audit-log",
+      "name": "Generate Audit Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2040, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  mode: 'live',\n  executionId: $json.executionId,\n  route: $json.selectedRoute,\n  priority: $json.priority,\n  readinessScore: $json.readinessScore,\n  claimId: $json.claimId,\n  notification: $json.notification,\n  hospitalDossier: $json.hospitalDossier,\n  auditRecord: $json.auditRecord,\n  nodesExecuted: [\n    { id: 'webhook_trigger', name: 'Claim Webhook Trigger', status: 'completed' },\n    { id: 'validate_payload', name: 'Validate Claim Payload', status: 'completed' },\n    { id: 'ai_triage', name: 'AI Triage & Readiness Assessment', status: 'completed' },\n    { id: 'route_selection', name: $json.selectedRoute === 'FAST_TRACK' ? 'Fast Track Queue Handler' : $json.selectedRoute === 'HUMAN_REVIEW' ? 'Officer Escalation Queue Handler' : 'Standard Review Queue Handler', status: 'completed' },\n    { id: 'notification_prep', name: 'Prepare Policyholder Alert', status: 'completed' },\n    { id: 'hospital_dossier', name: 'Prepare Hospital Dossier', status: 'completed' },\n    { id: 'audit_log', name: 'Generate Audit Record', status: 'completed' }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "node-respond-webhook",
+      "name": "Respond to FinJourney AI",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2260, 340]
+    }
+  ],
+  "connections": {
+    "Claim Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Claim Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Claim Payload": {
+      "main": [
+        [
+          {
+            "node": "AI Triage & Readiness Assessment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Triage & Readiness Assessment": {
+      "main": [
+        [
+          {
+            "node": "Is Human Review Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Human Review Required?": {
+      "main": [
+        [
+          {
+            "node": "Human Review Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Fast Track Eligible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Fast Track Eligible?": {
+      "main": [
+        [
+          {
+            "node": "Fast Track Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Standard Review Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review Branch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Policyholder Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fast Track Branch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Policyholder Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Standard Review Branch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Policyholder Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Policyholder Alert": {
+      "main": [
+        [
+          {
+            "node": "Prepare Hospital Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Hospital Dossier": {
+      "main": [
+        [
+          {
+            "node": "Generate Audit Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Audit Record": {
+      "main": [
+        [
+          {
+            "node": "Respond to FinJourney AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Paytm Build for India Hackathon"
+    },
+    {
+      "name": "FinJourney AI"
+    }
+  ]
+}
