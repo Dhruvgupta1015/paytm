@@ -1,18 +1,50 @@
+import { NextResponse } from 'next/server';
 import policies from '@/data/policies.json';
+import { authorizeCustomer, isCustomerAuthorizedForPolicy } from '@/lib/authz-server';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const journeyState = await request.json();
+  // Authoritative Customer Check
+  // Rejects unauthenticated requests with 401, officer role with 403
+  const authz = await authorizeCustomer(request);
+  if (!authz.authorized) {
+    return authz.response;
+  }
 
-  const policy = policies.find((p) => p.id === journeyState.selectedPolicyId);
+  const journeyState = await request.json().catch(() => ({}));
+
+  // Client-supplied memberId tampering guard:
+  // If the client explicitly specifies a memberId that differs from the authenticated session, reject with 403
+  if (journeyState.memberId && journeyState.memberId !== authz.customer.memberId) {
+    return NextResponse.json(
+      { ok: false, error: 'Forbidden: Member identity mismatch' },
+      { status: 403 }
+    );
+  }
+
+  const policyId = journeyState.selectedPolicyId || 'POL-HEALTH-001';
+
+  // Verify that the customer is authorized for this policy
+  if (policyId && !isCustomerAuthorizedForPolicy(authz.customer.memberId, policyId)) {
+    return NextResponse.json(
+      { ok: false, error: 'Forbidden: Policy not associated with authenticated member' },
+      { status: 403 }
+    );
+  }
+
+  const policy = policies.find((p) => p.id === policyId);
   const details = journeyState.claimDetails;
 
+  // Authoritatively bind member identity from the verified session
   const claim = {
     id: `CLM-2026-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
-    policyId: journeyState.selectedPolicyId || 'POL-HEALTH-001',
+    policyId,
+    memberId: authz.customer.memberId,
     status: 'draft',
     type: 'hospitalization',
     patient: {
-      name: details?.patientName || policy?.holder.name || 'Rahul Sharma',
+      name: authz.customer.name || details?.patientName || policy?.holder.name || 'Rahul Sharma',
       relation: details?.relation || 'self',
     },
     hospital: {
@@ -36,5 +68,5 @@ export async function POST(request: Request) {
     syntheticData: true,
   };
 
-  return Response.json(claim);
+  return NextResponse.json(claim);
 }

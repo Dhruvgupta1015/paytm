@@ -1,19 +1,39 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EscalationPanel } from '@/components/escalation/EscalationPanel';
-import officerQueueData from '@/data/officer-queue.json';
 import type { OfficerQueueCase } from '@/types';
 
 export default function OfficerDashboardPage() {
-  const [queue, setQueue] = useState<OfficerQueueCase[]>(officerQueueData as OfficerQueueCase[]);
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>('ESC-2026-8819'); // Default open first case
+  const [queue, setQueue] = useState<OfficerQueueCase[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [localAssignments, setLocalAssignments] = useState<Record<string, boolean>>({});
   const [selectedDossierTab, setSelectedDossierTab] = useState<'dossier' | 'automation'>('dossier');
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/officer/queue')
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((data) => {
+        if (isMounted && data?.cases && Array.isArray(data.cases)) {
+          setQueue(data.cases);
+          if (data.cases.length > 0) {
+            setSelectedCaseId(data.cases[0].caseId);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedCase = queue.find((c) => c.caseId === selectedCaseId);
 
@@ -56,16 +76,11 @@ export default function OfficerDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link href="/journey">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-indigo-400/50 text-indigo-100 hover:bg-indigo-800/60"
-              >
-                ← Switch to Customer View
-              </Button>
-            </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-indigo-200 bg-indigo-950/70 border border-indigo-700/50 px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Session: Paytm Claims Officer Console</span>
+            </span>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import './globals.css';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { JourneyProvider } from '@/context/JourneyContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -22,16 +23,18 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex antialiased">
-        <JourneyProvider>
-          {/* Sidebar — fixed left */}
-          <Sidebar />
+        <AuthProvider>
+          <JourneyProvider>
+            {/* Sidebar — fixed left */}
+            <Sidebar />
 
-          {/* Main content area — offset by sidebar width */}
-          <div className="flex-1 ml-64 flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1 overflow-y-auto">{children}</main>
-          </div>
-        </JourneyProvider>
+            {/* Main content area — offset by sidebar width */}
+            <div className="flex-1 ml-64 flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1 overflow-y-auto">{children}</main>
+            </div>
+          </JourneyProvider>
+        </AuthProvider>
       </body>
     </html>
   );

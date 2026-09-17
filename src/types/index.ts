@@ -95,6 +95,8 @@ export interface JourneyStep {
   status: JourneyStepStatus;
 }
 
+export type SupportedLanguage = 'en' | 'hi' | 'hinglish';
+
 export interface JourneyState {
   steps: JourneyStep[];
   currentStepIndex: number;
@@ -116,6 +118,7 @@ export interface JourneyState {
   twin?: FinancialJourneyTwin;
   activeMismatchScenario?: 'none' | 'date_mismatch' | 'amount_mismatch' | null;
   simulateLowConfidence?: boolean;
+  language?: SupportedLanguage;
 }
 
 // ─── Financial Journey Twin & Readiness Types ─────────────────────
@@ -430,4 +433,33 @@ export interface N8nExecutionResult {
   hospitalDossier: N8nHospitalDossierSummary;
   auditRecord: N8nAuditRecord;
   error?: string;
+}
+
+// ─── Authentication & Server Session Types ───────────────────────
+
+export type AuthRole = 'customer' | 'officer';
+
+export interface CustomerIdentity {
+  role: 'customer';
+  memberId: string;
+  email: string;
+  name?: string;
+}
+
+export interface OfficerIdentity {
+  role: 'officer';
+  officerId: string;
+  email: string;
+  name?: string;
+  badge?: string;
+  title?: string;
+}
+
+export type AuthIdentity = CustomerIdentity | OfficerIdentity;
+
+export interface ServerSession {
+  sessionId: string;
+  identity: AuthIdentity;
+  issuedAt: number;   // Epoch timestamp in milliseconds
+  expiresAt: number;  // Epoch timestamp in milliseconds
 }

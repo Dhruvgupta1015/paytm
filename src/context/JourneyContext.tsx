@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
-import type { JourneyState, JourneyStep, JourneyStepStatus, ClaimDocument, FinancialJourneyTwin } from '@/types';
+import type { JourneyState, JourneyStep, JourneyStepStatus, ClaimDocument, FinancialJourneyTwin, SupportedLanguage } from '@/types';
 import journeyStepsData from '@/data/journey-steps.json';
 import { deriveJourneyTwin } from '@/lib/twin-engine';
 
@@ -26,6 +26,7 @@ const BASE_INITIAL_STATE: JourneyState = {
   claimStatus: null,
   activeMismatchScenario: 'none',
   simulateLowConfidence: false,
+  language: 'en',
 };
 
 const INITIAL_STATE: JourneyState = {
@@ -51,6 +52,7 @@ function loadState(): JourneyState {
       const normalized: JourneyState = {
         ...parsed,
         currentStep: (parsed.currentStepIndex ?? 0) + 1,
+        language: parsed.language || 'en',
       };
       return withTwin(normalized);
     }
@@ -97,6 +99,8 @@ interface JourneyContextValue {
   setMismatchScenario: (scenario: 'none' | 'date_mismatch' | 'amount_mismatch') => void;
   /** Toggle low AI confidence simulation to demonstrate human escalation path */
   setSimulateLowConfidence: (val: boolean) => void;
+  /** Set selected language for conversational copilot */
+  setLanguage: (lang: SupportedLanguage) => void;
   /** Reset entire journey */
   resetJourney: () => void;
 }
@@ -244,6 +248,10 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => withTwin({ ...prev, simulateLowConfidence: val }));
   }, []);
 
+  const setLanguage = useCallback((lang: SupportedLanguage) => {
+    setState((prev) => withTwin({ ...prev, language: lang }));
+  }, []);
+
   const resetJourney = useCallback(() => {
     setState(INITIAL_STATE);
     if (typeof window !== 'undefined') {
@@ -281,6 +289,7 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         setClaimStatus,
         setMismatchScenario,
         setSimulateLowConfidence,
+        setLanguage,
         resetJourney,
       }}
     >

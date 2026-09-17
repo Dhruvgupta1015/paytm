@@ -28,10 +28,13 @@ export function fetchPolicy(id: string) {
 
 // ─── Chat API ────────────────────────────────────────────────────
 
-export function sendChatMessage(messages: { role: string; content: string }[]) {
+export function sendChatMessage(
+  messages: { role: string; content: string }[],
+  language?: import('@/types').SupportedLanguage
+) {
   return request<{ reply: string; isLiveSarvam?: boolean; model?: string }>('/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, language }),
   });
 }
 
@@ -83,8 +86,15 @@ export function fetchClaimStatus(claimId: string) {
 export const api = {
   fetchPolicies,
   fetchPolicy,
-  sendChatMessage: (content: string, history: { role: string; content: string }[] = []) =>
-    sendChatMessage([...history.map((m) => ({ role: m.role, content: m.content })), { role: 'user', content }]),
+  sendChatMessage: (
+    content: string,
+    history: { role: string; content: string }[] = [],
+    language?: import('@/types').SupportedLanguage
+  ) =>
+    sendChatMessage(
+      [...history.map((m) => ({ role: m.role, content: m.content })), { role: 'user', content }],
+      language
+    ),
   explainPolicy,
   uploadDocument,
   verifyDocuments,

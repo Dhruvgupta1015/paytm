@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS } from '@/lib/constants';
+import { NAV_ITEMS, ROUTES } from '@/lib/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const icons: Record<string, React.ReactNode> = {
   journey: (
@@ -36,10 +37,33 @@ const icons: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   ),
+  officer: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
 };
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, role } = useAuth();
+
+  const isOfficer = role === 'officer';
+  const displayName = user?.name || (isOfficer ? 'Priya Verma' : 'Rahul Sharma');
+  const displayId =
+    (user as any)?.officerId ||
+    (user as any)?.memberId ||
+    (isOfficer ? 'PAYTM-ESC-9042' : 'MEM-2024-78432');
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2);
+
+  // Officer navigation vs Customer navigation
+  const navItems = isOfficer
+    ? [{ label: 'Escalation Queue', href: ROUTES.OFFICER, icon: 'officer' }]
+    : NAV_ITEMS;
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-bg-sidebar flex flex-col z-40">
@@ -53,14 +77,16 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">FinJourney AI</h1>
-            <p className="text-[10px] text-indigo-300 tracking-widest uppercase">Insurance Copilot</p>
+            <p className="text-[10px] text-indigo-300 tracking-widest uppercase">
+              {isOfficer ? 'Officer Console' : 'Insurance Copilot'}
+            </p>
           </div>
         </Link>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link
@@ -89,11 +115,11 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-indigo-700/30">
         <div className="flex items-center gap-3 px-2">
           <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-            RS
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">Rahul Sharma</p>
-            <p className="text-[11px] text-indigo-300 truncate">MEM-2024-78432</p>
+            <p className="text-sm font-medium text-white truncate">{displayName}</p>
+            <p className="text-[11px] text-indigo-300 truncate font-mono">{displayId}</p>
           </div>
         </div>
       </div>

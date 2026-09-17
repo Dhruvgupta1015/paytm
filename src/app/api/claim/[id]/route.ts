@@ -1,16 +1,38 @@
+import { NextResponse } from 'next/server';
+import { authorizeCustomer, isCustomerAuthorizedForClaim } from '@/lib/authz-server';
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Authoritative Customer Check
+  // Rejects unauthenticated requests with 401, officer role with 403
+  const authz = await authorizeCustomer(request);
+  if (!authz.authorized) {
+    return authz.response;
+  }
+
   const { id } = await params;
 
-  // Return a mock claim status
+  // Resource ownership verification:
+  // Server verifies that this claim belongs to the authenticated customer
+  if (!isCustomerAuthorizedForClaim(authz.customer.memberId, id)) {
+    // 403 Forbidden - generic safe response without revealing existence of other claims
+    return NextResponse.json(
+      { ok: false, error: 'Access denied' },
+      { status: 403 }
+    );
+  }
+
+  // Return claim status for authorized customer
   const claim = {
     id,
     status: 'submitted_for_review',
     type: 'hospitalization',
     patient: {
-      name: 'Rahul Sharma',
+      name: authz.customer.name || 'Rahul Sharma',
       relation: 'self',
     },
     hospital: {
@@ -32,5 +54,5 @@ export async function GET(
     syntheticData: true,
   };
 
-  return Response.json(claim);
+  return NextResponse.json(claim);
 }
