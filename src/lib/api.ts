@@ -30,11 +30,18 @@ export function fetchPolicy(id: string) {
 
 export function sendChatMessage(
   messages: { role: string; content: string }[],
-  language?: import('@/types').SupportedLanguage
+  language?: import('@/types').SupportedLanguage,
+  journeyState?: Partial<import('@/types').JourneyState>
 ) {
-  return request<{ reply: string; isLiveSarvam?: boolean; model?: string }>('/api/chat', {
+  return request<{
+    reply: string;
+    isLiveSarvam?: boolean;
+    model?: string;
+    decisionTrace?: import('@/types').DecisionTraceEvent[];
+    proposedAction?: import('@/types').ProposedAction;
+  }>('/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ messages, language }),
+    body: JSON.stringify({ messages, language, journeyState }),
   });
 }
 
@@ -89,11 +96,13 @@ export const api = {
   sendChatMessage: (
     content: string,
     history: { role: string; content: string }[] = [],
-    language?: import('@/types').SupportedLanguage
+    language?: import('@/types').SupportedLanguage,
+    journeyState?: Partial<import('@/types').JourneyState>
   ) =>
     sendChatMessage(
       [...history.map((m) => ({ role: m.role, content: m.content })), { role: 'user', content }],
-      language
+      language,
+      journeyState
     ),
   explainPolicy,
   uploadDocument,

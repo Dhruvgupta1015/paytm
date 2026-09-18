@@ -304,12 +304,57 @@ export interface FinancialJourneyTwin {
 
 export type ChatRole = 'user' | 'assistant' | 'system';
 
+// ─── Claim Navigator Agent & Tool Calling Types ──────────────────
+
+export type NavigatorToolName =
+  | 'policy_rag'
+  | 'document_intelligence'
+  | 'claim_readiness'
+  | 'journey_state'
+  | 'evidence_verification';
+
+export type DecisionTraceEventType =
+  | 'navigator_intent'
+  | 'tool_call'
+  | 'tool_result'
+  | 'authoritative_read'
+  | 'proposed_action'
+  | 'deterministic_authority';
+
+export interface DecisionTraceEvent {
+  id: string;
+  timestamp: string;
+  type: DecisionTraceEventType;
+  title: string;
+  summary: string;
+  toolName?: NavigatorToolName;
+  status: 'ok' | 'warning' | 'info' | 'blocked';
+  details?: Record<string, unknown>;
+}
+
+export interface ProposedAction {
+  actionKey:
+    | 'confirm_hospitalization'
+    | 'select_policy'
+    | 'upload_documents'
+    | 'review_draft'
+    | 'submit_claim'
+    | 'track_claim'
+    | 'escalate_human';
+  label: string;
+  description?: string;
+  targetStep?: number;
+  requiresUserApproval: true;
+}
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
   timestamp: string;
   isLiveSarvam?: boolean;
+  decisionTrace?: DecisionTraceEvent[];
+  proposedAction?: ProposedAction;
 }
 
 // ─── Escalation Types ────────────────────────────────────────────

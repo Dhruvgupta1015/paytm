@@ -8,7 +8,7 @@ import { ChatMessage, ActionButton } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
-import type { ChatMessage as ChatMessageType, SupportedLanguage } from '@/types';
+import type { ChatMessage as ChatMessageType, SupportedLanguage, ProposedAction } from '@/types';
 
 const getWelcomeMessage = (lang: SupportedLanguage = 'en'): string => {
   if (lang === 'hi') {
@@ -108,7 +108,7 @@ export const ChatPanel: React.FC = () => {
     }
 
     try {
-      const response = await api.sendChatMessage(content, messages, currentLanguage);
+      const response = await api.sendChatMessage(content, messages, currentLanguage, state);
       const asstReplyId = `asst_${++msgIdCounterRef.current}`;
       const assistantMsg: ChatMessageType = {
         id: asstReplyId,
@@ -116,6 +116,8 @@ export const ChatPanel: React.FC = () => {
         content: response.reply,
         timestamp: new Date().toISOString(),
         isLiveSarvam: response.isLiveSarvam,
+        decisionTrace: response.decisionTrace,
+        proposedAction: response.proposedAction,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -136,7 +138,41 @@ export const ChatPanel: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentLanguage, messages]);
+  }, [currentLanguage, messages, state]);
+
+  // Handle explicit customer approval on AI recommended proposed actions
+  const handleExecuteProposedAction = useCallback(
+    (action: ProposedAction) => {
+      switch (action.actionKey) {
+        case 'confirm_hospitalization':
+          advanceStep();
+          break;
+        case 'select_policy':
+          selectPolicy('POL-HEALTH-001');
+          advanceStep();
+          break;
+        case 'upload_documents':
+          router.push('/documents');
+          break;
+        case 'review_draft':
+          router.push('/claim/draft');
+          break;
+        case 'submit_claim':
+          router.push('/claim/draft');
+          break;
+        case 'track_claim':
+          router.push('/claim/tracking');
+          break;
+        case 'escalate_human':
+          setHumanEscalated(true);
+          break;
+        default:
+          advanceStep();
+          break;
+      }
+    },
+    [advanceStep, selectPolicy, router]
+  );
 
   // Generate explicit UI Action Buttons based on current deterministic journey step
   const getContextualActionButtons = (): ActionButton[] => {
@@ -486,6 +522,7 @@ export const ChatPanel: React.FC = () => {
               actionButtons={
                 isLatestAssistantMsg ? getContextualActionButtons() : undefined
               }
+              onExecuteProposedAction={handleExecuteProposedAction}
             />
           );
         })}

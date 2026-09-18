@@ -1,9 +1,8 @@
-'use client';
-
 import React from 'react';
-import { ChatMessage as ChatMessageType } from '@/types';
+import { ChatMessage as ChatMessageType, ProposedAction } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { DecisionTraceView } from './DecisionTraceView';
 
 export interface ActionButton {
   label: string;
@@ -16,11 +15,13 @@ interface ChatMessageProps {
   message: ChatMessageType;
   actionButtons?: ActionButton[];
   onExplainClause?: (clause: string) => void;
+  onExecuteProposedAction?: (action: ProposedAction) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   actionButtons,
+  onExecuteProposedAction,
 }) => {
   const isUser = message.role === 'user';
   const isHindi = /[\u0900-\u097F]/.test(message.content);
@@ -95,6 +96,44 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           }`}
         >
           <div className="whitespace-pre-wrap">{message.content}</div>
+
+          {/* AI Decision Trace Viewer */}
+          {!isUser && message.decisionTrace && message.decisionTrace.length > 0 && (
+            <DecisionTraceView events={message.decisionTrace} />
+          )}
+
+          {/* Proposed Action Card (Requires Explicit User Approval) */}
+          {!isUser && message.proposedAction && onExecuteProposedAction && (
+            <div className="mt-3 p-2.5 rounded-lg bg-amber-50/90 border border-amber-200/90 text-amber-950 flex flex-col gap-1.5 shadow-2xs">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <span>➡️</span>
+                  <span>{message.proposedAction.label}</span>
+                </span>
+                <span className="text-[10px] bg-white text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 font-medium">
+                  Approval Required
+                </span>
+              </div>
+              {message.proposedAction.description && (
+                <p className="text-[11px] text-amber-800 leading-normal">
+                  {message.proposedAction.description}
+                </p>
+              )}
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] text-amber-700 font-medium flex items-center gap-1">
+                  <span>🔒</span> State transition executed deterministically on click
+                </span>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => onExecuteProposedAction(message.proposedAction!)}
+                  className="text-xs py-1 px-3 bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-xs cursor-pointer"
+                >
+                  Confirm & Proceed
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Interactive Action Buttons inside assistant bubbles */}
           {!isUser && actionButtons && actionButtons.length > 0 && (
