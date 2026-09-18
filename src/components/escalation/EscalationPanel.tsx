@@ -40,9 +40,14 @@ export const EscalationPanel: React.FC<EscalationPanelProps> = ({
   } = useSpeechRecognition({ lang: 'en-IN' });
 
   // Stream voice transcript into notes
+  const prevTranscriptRef = useRef(speechTranscript);
   useEffect(() => {
-    if (speechTranscript) {
-      setNotes(speechTranscript);
+    if (speechTranscript && speechTranscript !== prevTranscriptRef.current) {
+      prevTranscriptRef.current = speechTranscript;
+      const tId = setTimeout(() => {
+        setNotes(speechTranscript);
+      }, 0);
+      return () => clearTimeout(tId);
     }
   }, [speechTranscript]);
 
@@ -62,8 +67,7 @@ export const EscalationPanel: React.FC<EscalationPanelProps> = ({
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       streamRef.current = stream;
       setIsCameraActive(true);
-    } catch (err: any) {
-      console.error('Camera error:', err);
+    } catch {
       setCameraError('Camera permission denied or camera unavailable. Continuing with voice & note mode.');
       setIsCameraActive(false);
     }

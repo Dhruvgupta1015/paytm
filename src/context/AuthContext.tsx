@@ -57,8 +57,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshAuth();
-  }, [refreshAuth]);
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (active && data.ok && data.user) {
+            setUser(data.user);
+            setIsLoading(false);
+            return;
+          }
+        }
+        if (active) {
+          setUser(null);
+          setIsLoading(false);
+        }
+      } catch {
+        if (active) {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Authoritative login via POST /api/auth/login
   const login = async (email: string, pin: string) => {

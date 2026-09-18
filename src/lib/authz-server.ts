@@ -40,9 +40,23 @@ export const OTHER_CUSTOMER_CLAIMS: Record<string, string> = {
 };
 
 /**
- * Claims explicitly mapped to Rahul Sharma (MEM-2024-78432)
+ * Exact claim ownership mapping for Rahul Sharma (MEM-2024-78432).
+ * Wildcards and prefixes are strictly disallowed.
  */
-export const RAHUL_SHARMA_CLAIMS: string[] = ['CLM-2026-8819'];
+export const RAHUL_SHARMA_CLAIMS = new Set<string>([
+  'CLM-2026-8819',
+  'CLM-2026-00142',
+  'CLM-2025-00891',
+]);
+
+/**
+ * Dynamically register a newly drafted claim under an authenticated customer's ownership.
+ */
+export function registerCustomerClaim(memberId: string, claimId: string): void {
+  if (memberId === 'MEM-2024-78432') {
+    RAHUL_SHARMA_CLAIMS.add(claimId);
+  }
+}
 
 /**
  * Officer Case Authorization Mappings:
@@ -130,7 +144,7 @@ export async function authorizeOfficer(request: Request): Promise<AuthzOfficerRe
 
 /**
  * Verifies whether an authenticated customer is authorized to access a specific claim.
- * Prevents horizontal privilege escalation (viewing other customer claims).
+ * Uses exact ownership lookup. Prefix matching and wildcards are strictly prohibited.
  */
 export function isCustomerAuthorizedForClaim(memberId: string, claimId: string): boolean {
   if (!memberId || !claimId) return false;
@@ -141,15 +155,9 @@ export function isCustomerAuthorizedForClaim(memberId: string, claimId: string):
     return false;
   }
 
-  // Rahul Sharma (MEM-2024-78432)
+  // Exact ownership mapping for Rahul Sharma (MEM-2024-78432)
   if (memberId === 'MEM-2024-78432') {
-    if (RAHUL_SHARMA_CLAIMS.includes(claimId)) {
-      return true;
-    }
-    // Any synthetic claim generated for Rahul Sharma in session
-    if (claimId.startsWith('CLM-2026-') || claimId.startsWith('CLM-')) {
-      return true;
-    }
+    return RAHUL_SHARMA_CLAIMS.has(claimId);
   }
 
   return false;
@@ -160,7 +168,8 @@ export function isCustomerAuthorizedForClaim(memberId: string, claimId: string):
  */
 export function isCustomerAuthorizedForPolicy(memberId: string, policyId: string): boolean {
   if (!memberId || !policyId) return false;
-  const policy = (policiesData as any[]).find((p) => p.id === policyId);
+  const policyList = policiesData as unknown as Array<{ id: string; holder?: { memberId?: string } }>;
+  const policy = policyList.find((p) => p.id === policyId);
   if (!policy) return false;
   if (policy.holder?.memberId && policy.holder.memberId !== memberId) {
     return false;
@@ -180,9 +189,21 @@ export function isOfficerAuthorizedForCase(officerId: string, caseId: string): b
 }
 
 /**
+ * Verifies whether an authenticated officer is authorized for a specific claim by mapping to case.
+ */
+export function isOfficerAuthorizedForClaim(officerId: string, claimId: string): boolean {
+  if (!officerId || !claimId) return false;
+  const queueList = officerQueueData as unknown as Array<{ caseId: string; claimId: string }>;
+  const targetCase = queueList.find((c) => c.claimId === claimId);
+  if (!targetCase) return false;
+  return isOfficerAuthorizedForCase(officerId, targetCase.caseId);
+}
+
+/**
  * Returns strictly the subset of officer queue cases assigned to the authenticated officer.
  */
 export function getAuthorizedCasesForOfficer(officerId: string) {
   const allowedCases = OFFICER_CASE_MAPPINGS[officerId] || [];
-  return (officerQueueData as any[]).filter((c) => allowedCases.includes(c.caseId));
+  const queueList = officerQueueData as unknown as Array<{ caseId: string }>;
+  return queueList.filter((c) => allowedCases.includes(c.caseId));
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromRequest } from '@/lib/auth-server';
+import { isCustomerAuthorizedForClaim, isOfficerAuthorizedForClaim } from '@/lib/authz-server';
 import type {
   N8nTriggerPayload,
   N8nExecutionResult,
@@ -8,17 +10,106 @@ import type {
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Validates that an outbound webhook URL is safe from SSRF.
+ * Strictly forbids localhost, private IP ranges (RFC1918), and link-local cloud metadata (169.254.x.x).
+ */
+function isSafeOutboundUrl(urlString: string | undefined): boolean {
+  if (!urlString || typeof urlString !== 'string') return false;
+  try {
+    const parsed = new URL(urlString.trim());
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    // Disallow loopback / localhost
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname.endsWith('.localhost')
+    ) {
+      return false;
+    }
+    // Disallow link-local / cloud instance metadata (169.254.x.x)
+    if (hostname.startsWith('169.254.') || hostname.includes('metadata.google.internal')) {
+      return false;
+    }
+    // Disallow private RFC1918 IPv4 ranges (10.x, 192.168.x, 172.16.x - 172.31.x)
+    if (hostname.startsWith('10.') || hostname.startsWith('192.168.')) {
+      return false;
+    }
+    const match172 = hostname.match(/^172\.(\d+)\./);
+    if (match172) {
+      const octet = parseInt(match172[1], 10);
+      if (octet >= 16 && octet <= 31) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+
+  // 1. Authoritative Server Session Verification (P0 - Finding 2)
+  const session = await getSessionFromRequest(req);
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
 
   try {
     const body: N8nTriggerPayload = await req.json().catch(() => ({}) as N8nTriggerPayload);
 
-    const claimId = body.claimId || `CLM-2026-${Math.floor(10000 + Math.random() * 90000)}`;
-    const customerName = body.customerName || 'Rahul Sharma';
+    const claimId = body.claimId;
+    if (!claimId) {
+      return NextResponse.json(
+        { ok: false, error: 'Claim ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Resource-Level Authorization (P0 - Finding 2)
+    if (session.identity.role === 'customer') {
+      const memberId = session.identity.memberId;
+      if (!isCustomerAuthorizedForClaim(memberId, claimId)) {
+        return NextResponse.json(
+          { ok: false, error: 'Forbidden: Claim ownership verification failed' },
+          { status: 403 }
+        );
+      }
+    } else if (session.identity.role === 'officer') {
+      const officerId = session.identity.officerId;
+      if (!isOfficerAuthorizedForClaim(officerId, claimId)) {
+        return NextResponse.json(
+          { ok: false, error: 'Forbidden: Officer case authorization failed' },
+          { status: 403 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { ok: false, error: 'Forbidden: Unauthorized role' },
+        { status: 403 }
+      );
+    }
+
+    const customerName: string =
+      (session.identity.role === 'customer'
+        ? session.identity.name
+        : body.customerName) || 'Rahul Sharma';
     const policyNumber = body.policyNumber || 'POL-HEALTH-001';
     const hospitalName = body.hospitalName || 'Apollo Hospital, Delhi';
-    const memberId = body.memberId || 'MEM-2024-78432';
+    const memberId =
+      session.identity.role === 'customer'
+        ? session.identity.memberId
+        : body.memberId || 'MEM-2024-78432';
     const readinessScore = typeof body.readinessScore === 'number' ? body.readinessScore : 92;
     const contradictions = Array.isArray(body.contradictions) ? body.contradictions : [];
     const contradictionCount = contradictions.length;
@@ -26,8 +117,11 @@ export async function POST(req: NextRequest) {
     const deductions = typeof body.deductions === 'number' ? body.deductions : 6500;
     const estimatedPayable = typeof body.estimatedPayable === 'number' ? body.estimatedPayable : (grossAmount - deductions);
 
-    // Prioritize configured environment variable, with optional custom test URL from client
-    const webhookUrl = body.customWebhookUrl?.trim() || process.env.N8N_WEBHOOK_URL?.trim();
+    // 3. SSRF Protection:
+    // Client-supplied customWebhookUrl is strictly ignored/rejected for live outbound fetch.
+    // Production server exclusively uses validated process.env.N8N_WEBHOOK_URL.
+    const rawEnvUrl = process.env.N8N_WEBHOOK_URL?.trim();
+    const webhookUrl = isSafeOutboundUrl(rawEnvUrl) ? rawEnvUrl : null;
 
     // ─── LIVE MODE ATTEMPT (Strict 3000ms timeout) ───────────────────────────
     if (webhookUrl) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useJourney } from '@/context/JourneyContext';
 import { useSpeechRecognition } from '@/lib/useSpeechRecognition';
@@ -33,9 +33,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   } = useSpeechRecognition({ lang: speechLang });
 
   // When speech transcript updates, populate input box without auto-submitting
+  const prevTranscriptRef = useRef(transcript);
   useEffect(() => {
-    if (transcript) {
-      setInput(transcript);
+    if (transcript && transcript !== prevTranscriptRef.current) {
+      prevTranscriptRef.current = transcript;
+      const tId = setTimeout(() => {
+        setInput(transcript);
+      }, 0);
+      return () => clearTimeout(tId);
     }
   }, [transcript]);
 

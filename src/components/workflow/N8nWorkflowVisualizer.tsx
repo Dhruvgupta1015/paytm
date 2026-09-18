@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import type { N8nExecutionResult, N8nRoute, N8nWorkflowNode } from '@/types';
+import type { N8nExecutionResult, N8nRoute } from '@/types';
 
 interface N8nWorkflowVisualizerProps {
   claimId: string;
@@ -31,35 +31,25 @@ export const N8nWorkflowVisualizer: React.FC<N8nWorkflowVisualizerProps> = ({
   autoRunOnMount = false,
 }) => {
   const [isRunning, setIsRunning] = useState(false);
-  const [executionResult, setExecutionResult] = useState<N8nExecutionResult | null>(null);
+  const storageKey = `finjourney_n8n_exec_${claimId}`;
+
+  // Lazy initialize execution result from session cache
+  const [executionResult, setExecutionResult] = useState<N8nExecutionResult | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = sessionStorage.getItem(`finjourney_n8n_exec_${claimId}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [activeTab, setActiveTab] = useState<'trace' | 'notification' | 'hospital' | 'audit'>('trace');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customWebhookUrl, setCustomWebhookUrl] = useState('');
   const [testStatus, setTestStatus] = useState<string | null>(null);
 
-  // Storage key to prevent duplicate runs on ordinary reloads
-  const storageKey = `finjourney_n8n_exec_${claimId}`;
-
-  useEffect(() => {
-    // Check if an execution result was already cached for this claim
-    try {
-      const cached = sessionStorage.getItem(storageKey);
-      if (cached) {
-        setExecutionResult(JSON.parse(cached));
-        return;
-      } else {
-        setExecutionResult(null);
-      }
-    } catch {
-      // Ignore storage errors in restricted contexts
-    }
-
-    if (autoRunOnMount && !executionResult && !isRunning) {
-      handleRunWorkflow();
-    }
-  }, [claimId]);
-
-  const handleRunWorkflow = async (overrideWebhookUrl?: string) => {
+  const handleRunWorkflow = useCallback(async (overrideWebhookUrl?: string) => {
     setIsRunning(true);
     setTestStatus(null);
 
@@ -98,7 +88,27 @@ export const N8nWorkflowVisualizer: React.FC<N8nWorkflowVisualizerProps> = ({
     } finally {
       setIsRunning(false);
     }
-  };
+  }, [
+    claimId,
+    customerName,
+    policyNumber,
+    hospitalName,
+    readinessScore,
+    contradictionCount,
+    grossAmount,
+    deductions,
+    estimatedPayable,
+    customWebhookUrl,
+    storageKey,
+  ]);
+
+  const hasAutoRunRef = useRef(false);
+  useEffect(() => {
+    if (autoRunOnMount && !hasAutoRunRef.current && !executionResult && !isRunning) {
+      hasAutoRunRef.current = true;
+      handleRunWorkflow();
+    }
+  }, [autoRunOnMount, executionResult, isRunning, handleRunWorkflow]);
 
   const handleDownloadWorkflowJson = () => {
     const link = document.createElement('a');

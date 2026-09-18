@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 
 interface UseSpeechRecognitionOptions {
   lang?: string;
@@ -18,6 +18,52 @@ export interface UseSpeechRecognitionReturn {
   error: string | null;
 }
 
+interface ISpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      [subIndex: number]: { transcript: string };
+    };
+  };
+}
+
+interface ISpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface ISpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onerror: ((event: ISpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface WindowWithSpeech {
+  SpeechRecognition?: new () => ISpeechRecognitionInstance;
+  webkitSpeechRecognition?: new () => ISpeechRecognitionInstance;
+}
+
+function subscribeNoop() {
+  return () => {};
+}
+
+function getIsSupportedSnapshot(): boolean {
+  if (typeof window === 'undefined') return false;
+  const win = window as unknown as WindowWithSpeech;
+  return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
+}
+
+function getIsSupportedServerSnapshot(): boolean {
+  return false;
+}
+
 export function useSpeechRecognition({
   lang = 'en-IN',
   continuous = true,
@@ -25,22 +71,22 @@ export function useSpeechRecognition({
 }: UseSpeechRecognitionOptions = {}): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const recognitionRef = useRef<any>(null);
-  const currentLangRef = useRef(lang);
-  currentLangRef.current = lang;
+  // Read browser capability safely without cascading setState in effect
+  const isSupported = useSyncExternalStore(
+    subscribeNoop,
+    getIsSupportedSnapshot,
+    getIsSupportedServerSnapshot
+  );
 
-  // Check browser support on client mount
+  const recognitionRef = useRef<ISpeechRecognitionInstance | null>(null);
+  const currentLangRef = useRef(lang);
+
+  // Update ref inside effect to comply with React 19 purity rules
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition ||
-        (window as any).webkitSpeechRecognition;
-      setIsSupported(Boolean(SpeechRecognition));
-    }
-  }, []);
+    currentLangRef.current = lang;
+  }, [lang]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -58,9 +104,8 @@ export function useSpeechRecognition({
 
     if (typeof window === 'undefined') return;
 
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+    const win = window as unknown as WindowWithSpeech;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
@@ -72,7 +117,7 @@ export function useSpeechRecognition({
         try {
           recognitionRef.current.abort();
         } catch {
-          // ignore
+          // Safe ignore
         }
       }
 
@@ -86,7 +131,7 @@ export function useSpeechRecognition({
         setError(null);
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: ISpeechRecognitionEvent) => {
         let currentTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const item = event.results[i];
@@ -99,7 +144,7 @@ export function useSpeechRecognition({
         }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: ISpeechRecognitionErrorEvent) => {
         const errType = event.error;
         if (errType === 'not-allowed') {
           setError('Microphone permission denied. Please allow microphone access in your browser.');
@@ -117,7 +162,7 @@ export function useSpeechRecognition({
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Speech recognition start failed:', err);
       setError('Unable to activate microphone. Please verify browser permissions.');
       setIsListening(false);

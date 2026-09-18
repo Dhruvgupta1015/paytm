@@ -1,23 +1,40 @@
+import { NextResponse } from 'next/server';
 import policies from '@/data/policies.json';
+import { authorizeCustomer, isCustomerAuthorizedForPolicy } from '@/lib/authz-server';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const { policyId, clause } = await request.json();
+  // Authoritative Customer Session Check (P0 - Finding 2)
+  const authz = await authorizeCustomer(request);
+  if (!authz.authorized) {
+    return authz.response;
+  }
+
+  const { policyId, clause } = await request.json().catch(() => ({}));
+
+  if (!policyId || !clause) {
+    return NextResponse.json({ message: 'Missing policyId or clause' }, { status: 400 });
+  }
 
   const policy = policies.find((p) => p.id === policyId);
   if (!policy) {
-    return Response.json({ message: 'Policy not found' }, { status: 404 });
+    return NextResponse.json({ message: 'Policy not found' }, { status: 404 });
+  }
+
+  if (!isCustomerAuthorizedForPolicy(authz.customer.memberId, policy.id)) {
+    return NextResponse.json({ message: 'Access denied' }, { status: 403 });
   }
 
   const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) {
     // Fallback: return a templated explanation
-    return Response.json({
+    return NextResponse.json({
       explanation: generateFallbackExplanation(policy.name, clause),
     });
   }
 
   try {
-    console.log('[SARVAM EXPLAIN-POLICY] Requesting explanation using sarvam-105b-conversations');
     const res = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,12 +58,10 @@ export async function POST(request: Request) {
       }),
     });
 
-    const status = res.status;
     const rawBody = await res.text();
-    console.log(`[SARVAM EXPLAIN-POLICY] Status: ${status}, Body: ${rawBody}`);
 
     if (!res.ok) {
-      return Response.json({
+      return NextResponse.json({
         explanation: generateFallbackExplanation(policy.name, clause),
         isLiveSarvam: false,
       });
@@ -57,10 +72,9 @@ export async function POST(request: Request) {
       data.choices?.[0]?.message?.content ||
       generateFallbackExplanation(policy.name, clause);
 
-    return Response.json({ explanation, isLiveSarvam: true });
-  } catch (err) {
-    console.error('[SARVAM EXPLAIN-POLICY] Exception:', err);
-    return Response.json({
+    return NextResponse.json({ explanation, isLiveSarvam: true });
+  } catch {
+    return NextResponse.json({
       explanation: generateFallbackExplanation(policy.name, clause),
       isLiveSarvam: false,
     });

@@ -27,7 +27,8 @@ export async function GET(
     );
   }
 
-  const foundCase = (officerQueueData as any[]).find((c) => c.caseId === id);
+  const queueList = officerQueueData as unknown as Array<Record<string, unknown>>;
+  const foundCase = queueList.find((c) => c.caseId === id);
   if (!foundCase) {
     return NextResponse.json(
       { ok: false, error: 'Case not found' },

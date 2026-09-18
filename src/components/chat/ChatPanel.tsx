@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useJourney } from '@/context/JourneyContext';
-import { ChatMessage as ChatMessageType } from '@/types';
 import { ChatMessage, ActionButton } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
-import Link from 'next/link';
-import type { SupportedLanguage } from '@/types';
+import type { ChatMessage as ChatMessageType, SupportedLanguage } from '@/types';
 
-const getWelcomeMessage = (lang: SupportedLanguage): string => {
+const getWelcomeMessage = (lang: SupportedLanguage = 'en'): string => {
   if (lang === 'hi') {
     return 'नमस्ते राहुल! मैं FinJourney AI हूँ, आपका 24x7 स्वास्थ्य बीमा सहायक।\n\nमैं कैशलेस या प्रतिपूर्ति (reimbursement) क्लेम दाखिल करने, पॉलिसी शर्तों को सरल हिंदी में समझाने और दस्तावेज़ जमा करने में आपका मार्गदर्शन कर सकता हूँ। आज मैं आपकी क्या सहायता करूँ?';
   }
@@ -21,7 +21,8 @@ const getWelcomeMessage = (lang: SupportedLanguage): string => {
 };
 
 export const ChatPanel: React.FC = () => {
-  const { state, setStep, advanceStep, selectPolicy, setLanguage } = useJourney();
+  const router = useRouter();
+  const { state, advanceStep, selectPolicy, setLanguage } = useJourney();
   const currentLanguage: SupportedLanguage = state.language || 'en';
 
   const [messages, setMessages] = useState<ChatMessageType[]>([
@@ -35,20 +36,24 @@ export const ChatPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [humanEscalated, setHumanEscalated] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const msgIdCounterRef = useRef(1);
 
   // Sync initial welcome message when user switches language before conversation starts
   useEffect(() => {
-    setMessages((prev) => {
-      if (prev.length === 1 && prev[0].id === 'msg-welcome') {
-        return [
-          {
-            ...prev[0],
-            content: getWelcomeMessage(currentLanguage),
-          },
-        ];
-      }
-      return prev;
-    });
+    const tId = setTimeout(() => {
+      setMessages((prev) => {
+        if (prev.length === 1 && prev[0].id === 'msg-welcome') {
+          return [
+            {
+              ...prev[0],
+              content: getWelcomeMessage(currentLanguage),
+            },
+          ];
+        }
+        return prev;
+      });
+    }, 0);
+    return () => clearTimeout(tId);
   }, [currentLanguage]);
 
   const scrollToBottom = () => {
@@ -59,12 +64,14 @@ export const ChatPanel: React.FC = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string) => {
+    const nowIso = new Date().toISOString();
+    const userMsgId = `user_${++msgIdCounterRef.current}`;
     const userMsg: ChatMessageType = {
-      id: `user-${Date.now()}`,
+      id: userMsgId,
       role: 'user',
       content,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -82,8 +89,9 @@ export const ChatPanel: React.FC = () => {
     ) {
       setHumanEscalated(true);
       setTimeout(() => {
+        const asstMsgId = `asst_${++msgIdCounterRef.current}`;
         const escalationMsg: ChatMessageType = {
-          id: `asst-${Date.now()}`,
+          id: asstMsgId,
           role: 'assistant',
           content:
             currentLanguage === 'hi'
@@ -101,8 +109,9 @@ export const ChatPanel: React.FC = () => {
 
     try {
       const response = await api.sendChatMessage(content, messages, currentLanguage);
+      const asstReplyId = `asst_${++msgIdCounterRef.current}`;
       const assistantMsg: ChatMessageType = {
-        id: `asst-${Date.now()}`,
+        id: asstReplyId,
         role: 'assistant',
         content: response.reply,
         timestamp: new Date().toISOString(),
@@ -111,8 +120,9 @@ export const ChatPanel: React.FC = () => {
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
       console.error('Chat error:', error);
+      const errMsgId = `err_${++msgIdCounterRef.current}`;
       const errorMsg: ChatMessageType = {
-        id: `err-${Date.now()}`,
+        id: errMsgId,
         role: 'assistant',
         content:
           currentLanguage === 'hi'
@@ -126,7 +136,7 @@ export const ChatPanel: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentLanguage, messages]);
 
   // Generate explicit UI Action Buttons based on current deterministic journey step
   const getContextualActionButtons = (): ActionButton[] => {
@@ -247,7 +257,7 @@ export const ChatPanel: React.FC = () => {
                 ? 'Go to Document Upload & Verification'
                 : 'Go to Document Upload & Verification',
             action: () => {
-              window.location.href = '/documents';
+              router.push('/documents');
             },
           },
         ];
@@ -263,7 +273,7 @@ export const ChatPanel: React.FC = () => {
                 ? 'Review Claim Draft & Submit'
                 : 'Review Claim Draft & Submit',
             action: () => {
-              window.location.href = '/claim/draft';
+              router.push('/claim/draft');
             },
           },
           {
@@ -296,7 +306,7 @@ export const ChatPanel: React.FC = () => {
                 ? 'Track Submitted Claim Status'
                 : 'Track Submitted Claim Status',
             action: () => {
-              window.location.href = '/claim/tracking';
+              router.push('/claim/tracking');
             },
           },
         ];

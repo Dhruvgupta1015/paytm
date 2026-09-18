@@ -102,36 +102,39 @@ export function maskAccountNumber(acc?: string | null): string {
  * Transforms a raw internal case record into an authoritative, minimized officer-safe payload.
  * Strips unneeded PII and masks sensitive identifiers before transmission.
  */
-export function toOfficerCaseView(rawCase: any): MinimizedOfficerQueueCase {
-  const cleanSummary = (rawCase.summary || '').replace(
+export function toOfficerCaseView(
+  rawCase: Record<string, unknown>
+): MinimizedOfficerQueueCase {
+  const summaryStr = typeof rawCase.summary === 'string' ? rawCase.summary : '';
+  const cleanSummary = summaryStr.replace(
     /Insured\s+([A-Za-z]+)\s+([A-Za-z]+)/g,
     (_match: string, p1: string, p2: string) => `Insured ${p1} ${p2[0]}.`
   );
 
   return {
-    caseId: rawCase.caseId,
-    claimId: rawCase.claimId,
-    customerName: maskCustomerName(rawCase.customerName),
-    customerAge: rawCase.customerAge,
-    policyName: rawCase.policyName,
-    policyNumber: maskPolicyNumber(rawCase.policyNumber),
-    hospitalName: rawCase.hospitalName,
-    admissionDates: rawCase.admissionDates,
-    claimedGross: rawCase.claimedGross,
-    estimatedPayable: rawCase.estimatedPayable,
-    deductiblesInfo: rawCase.deductiblesInfo,
-    attachedDocsSummary: (rawCase.attachedDocsSummary || '').replace(
+    caseId: String(rawCase.caseId || ''),
+    claimId: String(rawCase.claimId || ''),
+    customerName: maskCustomerName(String(rawCase.customerName || '')),
+    customerAge: typeof rawCase.customerAge === 'number' ? rawCase.customerAge : undefined,
+    policyName: String(rawCase.policyName || ''),
+    policyNumber: maskPolicyNumber(String(rawCase.policyNumber || '')),
+    hospitalName: String(rawCase.hospitalName || ''),
+    admissionDates: String(rawCase.admissionDates || ''),
+    claimedGross: String(rawCase.claimedGross || ''),
+    estimatedPayable: String(rawCase.estimatedPayable || ''),
+    deductiblesInfo: String(rawCase.deductiblesInfo || ''),
+    attachedDocsSummary: String(rawCase.attachedDocsSummary || '').replace(
       /Aadhaar(?:\s*\(verified\))?/gi,
       'Aadhaar (****-7843 verified)'
     ),
-    officerName: rawCase.officerName,
-    officerInitials: rawCase.officerInitials,
-    officerTitle: rawCase.officerTitle,
-    officerBadge: rawCase.officerBadge,
-    aiConfidence: rawCase.aiConfidence,
-    triggerReason: rawCase.triggerReason,
-    status: rawCase.status,
-    priority: rawCase.priority,
+    officerName: String(rawCase.officerName || ''),
+    officerInitials: String(rawCase.officerInitials || ''),
+    officerTitle: String(rawCase.officerTitle || ''),
+    officerBadge: String(rawCase.officerBadge || ''),
+    aiConfidence: typeof rawCase.aiConfidence === 'number' ? rawCase.aiConfidence : 0,
+    triggerReason: String(rawCase.triggerReason || ''),
+    status: String(rawCase.status || ''),
+    priority: String(rawCase.priority || ''),
     summary: cleanSummary,
   };
 }

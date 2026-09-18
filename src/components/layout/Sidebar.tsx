@@ -51,8 +51,8 @@ export function Sidebar() {
   const isOfficer = role === 'officer';
   const displayName = user?.name || (isOfficer ? 'Priya Verma' : 'Rahul Sharma');
   const displayId =
-    (user as any)?.officerId ||
-    (user as any)?.memberId ||
+    (user && 'officerId' in user && typeof user.officerId === 'string' && user.officerId) ||
+    (user && 'memberId' in user && typeof user.memberId === 'string' && user.memberId) ||
     (isOfficer ? 'PAYTM-ESC-9042' : 'MEM-2024-78432');
   const initials = displayName
     .split(' ')

@@ -115,8 +115,12 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
 
   // Load from localStorage on mount (client only)
   useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
+    const loaded = loadState();
+    const tId = setTimeout(() => {
+      setState(loaded);
+      setHydrated(true);
+    }, 0);
+    return () => clearTimeout(tId);
   }, []);
 
   // Persist on every change (after hydration)

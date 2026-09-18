@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import policies from '@/data/policies.json';
-import { authorizeCustomer, isCustomerAuthorizedForPolicy } from '@/lib/authz-server';
+import {
+  authorizeCustomer,
+  isCustomerAuthorizedForPolicy,
+  registerCustomerClaim,
+} from '@/lib/authz-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +40,13 @@ export async function POST(request: Request) {
   const policy = policies.find((p) => p.id === policyId);
   const details = journeyState.claimDetails;
 
+  const claimId = `CLM-2026-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+  // Exact ownership registration:
+  registerCustomerClaim(authz.customer.memberId, claimId);
+
   // Authoritatively bind member identity from the verified session
   const claim = {
-    id: `CLM-2026-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`,
+    id: claimId,
     policyId,
     memberId: authz.customer.memberId,
     status: 'draft',

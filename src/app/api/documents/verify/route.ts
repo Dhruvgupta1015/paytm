@@ -33,10 +33,10 @@ export async function POST(request: Request) {
   const rawDocs = body.documents || body.documentIds || [];
 
   // Scripted verification logic — deterministic by document type
-  const verified = rawDocs.map((doc: any, index: number) => {
+  const verified = rawDocs.map((doc: unknown, index: number) => {
     const docObj = typeof doc === 'string'
       ? { id: doc, name: `Document-${index + 1}.pdf`, type: 'bills' }
-      : doc;
+      : (doc as { id?: string; name?: string; type?: string });
     const result = verifyByType(docObj.type || 'other', docObj.name || '');
     return {
       ...docObj,

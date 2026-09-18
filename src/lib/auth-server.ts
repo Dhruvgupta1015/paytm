@@ -27,13 +27,18 @@ export const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60; // 8 hours (28,800 seconds)
 function getSessionSecret(): string {
   const envSecret = process.env.FINJOURNEY_SESSION_SECRET;
   if (envSecret && envSecret.trim().length > 0) {
-    return envSecret.trim();
+    const trimmed = envSecret.trim();
+    if (trimmed.length < 32) {
+      throw new Error('[auth-server] Critical error: FINJOURNEY_SESSION_SECRET in production must be at least 32 characters long.');
+    }
+    return trimmed;
   }
-  if (process.env.NODE_ENV === 'production') {
+  // Enforce required secret when running in deployed production environments (e.g. Vercel)
+  if (process.env.VERCEL === '1' || process.env.VERCEL_ENV === 'production') {
     throw new Error('[auth-server] Missing required environment variable: FINJOURNEY_SESSION_SECRET in production.');
   }
-  // Development prototype fallback only - never exposed to client or logs
-  return 'finjourney-prototype-dev-hmac-secret-delhi-2026';
+  // Development & local test prototype fallback (>=32 characters) - never exposed to client or logs
+  return 'finjourney-prototype-dev-hmac-secret-delhi-2026-min32char';
 }
 
 // ─── Universal Web Crypto Utilities (Node.js & Edge Runtime Compatible) ────
@@ -248,12 +253,25 @@ export function getSessionCookieOptions() {
 /**
  * Set the session cookie on a Response or NextResponse.
  */
+interface CookieStoreMethods {
+  set: (name: string, value: string, options: unknown) => void;
+  delete?: (name: string) => void;
+}
+
+interface ResponseWithCookieMethods extends Response {
+  cookies?: CookieStoreMethods;
+}
+
+/**
+ * Set the session cookie on a Response or NextResponse.
+ */
 export function setSessionCookie(response: Response, token: string): void {
   const options = getSessionCookieOptions();
+  const respWithCookies = response as ResponseWithCookieMethods;
 
   // If response is a NextResponse or provides cookies.set
-  if (typeof (response as any).cookies?.set === 'function') {
-    (response as any).cookies.set(options.name, token, {
+  if (typeof respWithCookies.cookies?.set === 'function') {
+    respWithCookies.cookies.set(options.name, token, {
       httpOnly: options.httpOnly,
       sameSite: options.sameSite,
       path: options.path,
@@ -272,9 +290,10 @@ export function setSessionCookie(response: Response, token: string): void {
  */
 export function clearSessionCookie(response: Response): void {
   const options = getSessionCookieOptions();
+  const respWithCookies = response as ResponseWithCookieMethods;
 
-  if (typeof (response as any).cookies?.set === 'function') {
-    (response as any).cookies.set(options.name, '', {
+  if (typeof respWithCookies.cookies?.set === 'function') {
+    respWithCookies.cookies.set(options.name, '', {
       httpOnly: options.httpOnly,
       sameSite: options.sameSite,
       path: options.path,
@@ -282,8 +301,8 @@ export function clearSessionCookie(response: Response): void {
       expires: new Date(0),
       secure: options.secure,
     });
-  } else if (typeof (response as any).cookies?.delete === 'function') {
-    (response as any).cookies.delete(options.name);
+  } else if (typeof respWithCookies.cookies?.delete === 'function') {
+    respWithCookies.cookies.delete(options.name);
   } else {
     const secureFlag = options.secure ? '; Secure' : '';
     const cookieHeaderVal = `${options.name}=; Path=${options.path}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${secureFlag}`;
@@ -297,6 +316,14 @@ export interface DemoUserRecord {
   email: string;
   pin: string;
   identity: AuthIdentity;
+}
+
+/**
+ * Check if demo prototype authentication is enabled.
+ * Defaults to true for hackathon evaluation unless explicitly disabled.
+ */
+export function isDemoLoginEnabled(): boolean {
+  return process.env.FINJOURNEY_ENABLE_DEMO_LOGIN !== 'false';
 }
 
 /**
@@ -336,6 +363,9 @@ export function authenticateDemoCredentials(
   email: string | null | undefined,
   pin: string | null | undefined
 ): AuthIdentity | null {
+  if (!isDemoLoginEnabled()) {
+    return null;
+  }
   if (!email || !pin || typeof email !== 'string' || typeof pin !== 'string') {
     return null;
   }

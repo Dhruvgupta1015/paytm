@@ -409,7 +409,7 @@ export interface N8nTriggerPayload {
   hospitalName?: string;
   memberId?: string;
   readinessScore: number;
-  contradictions: any[];
+  contradictions: Contradiction[];
   grossAmount: number;
   deductions: number;
   estimatedPayable: number;
