@@ -12,7 +12,7 @@ interface JourneyProgressProps {
   compact?: boolean;
 }
 
-export const JourneyProgress: React.FC<JourneyProgressProps> = ({ compact = false }) => {
+export const JourneyProgress: React.FC<JourneyProgressProps> = () => {
   const { state, setStep, advanceStep, resetJourney } = useJourney();
 
   const getStepRoute = (key: string) => {
@@ -79,7 +79,6 @@ export const JourneyProgress: React.FC<JourneyProgressProps> = ({ compact = fals
         {state.steps.map((step, index) => {
           const isCurrent = step.status === 'current';
           const isCompleted = step.status === 'completed';
-          const isUpcoming = step.status === 'upcoming';
           const route = getStepRoute(step.key);
 
           return (

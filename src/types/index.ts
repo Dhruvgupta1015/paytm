@@ -311,7 +311,8 @@ export type NavigatorToolName =
   | 'document_intelligence'
   | 'claim_readiness'
   | 'journey_state'
-  | 'evidence_verification';
+  | 'evidence_verification'
+  | 'finsim_simulator';
 
 export type DecisionTraceEventType =
   | 'navigator_intent'
@@ -355,6 +356,7 @@ export interface ChatMessage {
   isLiveSarvam?: boolean;
   decisionTrace?: DecisionTraceEvent[];
   proposedAction?: ProposedAction;
+  simulationResult?: FinSimScenarioResult;
 }
 
 // ─── Escalation Types ────────────────────────────────────────────
@@ -507,4 +509,34 @@ export interface ServerSession {
   identity: AuthIdentity;
   issuedAt: number;   // Epoch timestamp in milliseconds
   expiresAt: number;  // Epoch timestamp in milliseconds
+}
+
+// ─── FinSim Agent (Financial What-If Simulator) Types ───────────
+
+export interface FinSimFinancialValues {
+  grossHospitalBill: number;
+  deductibles: number;
+  estimatedPayable: number;
+  patientOutOfPocket: number;
+  currency: string;
+}
+
+export interface FinSimImpact {
+  grossDelta: number;
+  payableDelta: number;
+  outOfPocketDelta: number;
+  percentageChange: number;
+  summary: string;
+}
+
+export interface FinSimScenarioResult {
+  scenarioId: string;
+  scenarioDescription: string;
+  simulatedGross: number;
+  realFinancials: FinSimFinancialValues;
+  simulatedFinancials: FinSimFinancialValues;
+  impact: FinSimImpact;
+  isSimulation: true;
+  engineUsed: string;
+  disclaimer: string;
 }

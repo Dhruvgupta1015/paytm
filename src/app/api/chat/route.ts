@@ -4,11 +4,13 @@ import {
   executeNavigatorTool,
   NAVIGATOR_TOOL_REGISTRY,
 } from '@/lib/claim-navigator-tools';
+import { extractFinSimIntent } from '@/lib/finsim-engine';
 import type {
   NavigatorToolName,
   DecisionTraceEvent,
   ProposedAction,
   JourneyState,
+  FinSimScenarioResult,
 } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -43,6 +45,18 @@ function analyzeIntent(
   const currentStep = journeyState?.currentStep || 1;
   const toolsToCall: Array<{ toolName: NavigatorToolName; args: Record<string, unknown> }> = [];
 
+  // 0. FinSim What-If Simulation & Mutation Inquiries
+  const finSim = extractFinSimIntent(userMessage);
+  if (finSim.isFinSim) {
+    toolsToCall.push({
+      toolName: 'finsim_simulator',
+      args: {
+        hypotheticalGross: finSim.hypotheticalGross || 100000,
+        scenarioDescription: userMessage,
+      },
+    });
+  }
+
   // 1. Policy & Coverage Inquiries
   if (
     lower.includes('policy') ||
@@ -63,20 +77,21 @@ function analyzeIntent(
     });
   }
 
-  // 2. Financial, Deductibles & Payout Inquiries
+  // 2. Financial, Deductibles & Payout Inquiries (Only if not a FinSim What-If scenario)
   if (
-    lower.includes('78,500') ||
-    lower.includes('78500') ||
-    lower.includes('6,500') ||
-    lower.includes('6500') ||
-    lower.includes('85,000') ||
-    lower.includes('85000') ||
-    lower.includes('deduct') ||
-    lower.includes('payable') ||
-    lower.includes('bill') ||
-    lower.includes('cut') ||
-    lower.includes('कटौती') ||
-    lower.includes('payout')
+    !finSim.isFinSim &&
+    (lower.includes('78,500') ||
+      lower.includes('78500') ||
+      lower.includes('6,500') ||
+      lower.includes('6500') ||
+      lower.includes('85,000') ||
+      lower.includes('85000') ||
+      lower.includes('deduct') ||
+      lower.includes('payable') ||
+      lower.includes('bill') ||
+      lower.includes('cut') ||
+      lower.includes('कटौती') ||
+      lower.includes('payout'))
   ) {
     toolsToCall.push({ toolName: 'journey_state', args: {} });
   }
@@ -326,6 +341,8 @@ export async function POST(request: Request) {
 
   // 4. Live Sarvam Conversational Model Dispatch
   const apiKey = process.env.SARVAM_API_KEY;
+  const simulationResult = toolResults.finsim_simulator as FinSimScenarioResult | undefined;
+
   if (!apiKey) {
     console.log(`[SARVAM CHAT] reqId=${reqId} route=/api/chat status=fallback reason=missing_api_key lang=${language} tools=${Object.keys(toolResults).join(',')}`);
     const fallbackReply = generateFallbackReply(lastUserMsg, language, toolResults);
@@ -334,6 +351,7 @@ export async function POST(request: Request) {
       isLiveSarvam: false,
       decisionTrace,
       proposedAction: suggestedAction,
+      simulationResult,
       model: 'fallback-scripted',
     });
   }
@@ -439,6 +457,7 @@ CORE PRINCIPLES & BOUNDARIES:
       isLiveSarvam: true,
       decisionTrace,
       proposedAction: suggestedAction,
+      simulationResult,
       model: 'sarvam-105b-conversations',
       httpStatus: 200,
     });
@@ -451,6 +470,7 @@ CORE PRINCIPLES & BOUNDARIES:
       isLiveSarvam: false,
       decisionTrace,
       proposedAction: suggestedAction,
+      simulationResult,
       model: 'fallback-scripted',
     });
   }
@@ -465,6 +485,36 @@ function generateFallbackReply(
   toolResults: Record<string, unknown> = {}
 ): string {
   const lower = userMessage.toLowerCase();
+
+  // FinSim What-If Simulation
+  if (toolResults.finsim_simulator) {
+    const sim = toolResults.finsim_simulator as FinSimScenarioResult;
+    const isMutation = extractFinSimIntent(userMessage).isMutationAttempt;
+    const grossFormatted = sim.simulatedGross.toLocaleString('en-IN');
+    const payableFormatted = sim.simulatedFinancials.estimatedPayable.toLocaleString('en-IN');
+    const deltaFormatted = Math.abs(sim.impact.payableDelta).toLocaleString('en-IN');
+    const pct = `${sim.impact.percentageChange >= 0 ? '+' : ''}${sim.impact.percentageChange}%`;
+    const sign = sim.impact.payableDelta >= 0 ? '+' : '-';
+
+    if (language === 'hi') {
+      const prefix = isMutation
+        ? 'दाखिल किए गए क्लेम में सीधे बदलाव संभव नहीं है। हालांकि, FinSim सिमुलेटर के अनुसार:\n'
+        : 'यहाँ आपका FinSim व्हाट-इफ़ सिमुलेशन है:\n';
+      return `${prefix}यदि आपका कुल अस्पताल बिल ₹${grossFormatted} होता है, तो मानक गैर-चिकित्सा कटौती ₹6,500 के बाद आपका अनुमानित देय भुगतान ₹${payableFormatted} (${sign}₹${deltaFormatted} या ${pct}) होगा। आपका वास्तविक क्लेम ₹85,000 पर सुरक्षित और अपरिवर्तित रहेगा।`;
+    }
+
+    if (language === 'hinglish') {
+      const prefix = isMutation
+        ? 'Directly filed claim mutate nahi ho sakta. Lekin FinSim simulator ke hisaab se:\n'
+        : 'Ye raha aapka FinSim What-If Simulation:\n';
+      return `${prefix}Agar aapka hospital bill ₹${grossFormatted} hota hai, toh standard non-medical deductions ₹6,500 ke baad estimated payout ₹${payableFormatted} (${sign}₹${deltaFormatted} / ${pct}) banega. Aapka actual claim ₹85,000 par 100% safe aur unchanged hai.`;
+    }
+
+    const prefix = isMutation
+      ? 'Official claim packets cannot be directly modified through chat. However, here is the FinSim what-if projection:\n'
+      : 'Here is your FinSim What-If Financial Simulation:\n';
+    return `${prefix}If your hospital bill is ₹${grossFormatted}, after deducting ₹6,500 for standard non-medical consumables, your estimated insurance payout would be ₹${payableFormatted} (${sign}₹${deltaFormatted} or ${pct}). Your actual submitted claim remains unchanged at ₹85,000 gross.`;
+  }
 
   // Deductions & Financials
   if (

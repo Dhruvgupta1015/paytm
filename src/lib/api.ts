@@ -39,6 +39,7 @@ export function sendChatMessage(
     model?: string;
     decisionTrace?: import('@/types').DecisionTraceEvent[];
     proposedAction?: import('@/types').ProposedAction;
+    simulationResult?: import('@/types').FinSimScenarioResult;
   }>('/api/chat', {
     method: 'POST',
     body: JSON.stringify({ messages, language, journeyState }),

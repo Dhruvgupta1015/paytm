@@ -118,6 +118,7 @@ export const ChatPanel: React.FC = () => {
         isLiveSarvam: response.isLiveSarvam,
         decisionTrace: response.decisionTrace,
         proposedAction: response.proposedAction,
+        simulationResult: response.simulationResult,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -173,6 +174,29 @@ export const ChatPanel: React.FC = () => {
     },
     [advanceStep, selectPolicy, router]
   );
+
+  const handleSelectSimulationScenario = useCallback(
+    (amount: number) => {
+      const prompt =
+        currentLanguage === 'hi'
+          ? `अगर मेरा अस्पताल बिल ₹${amount.toLocaleString('en-IN')} हो तो क्या होगा?`
+          : currentLanguage === 'hinglish'
+          ? `Agar mera hospital bill ₹${amount.toLocaleString('en-IN')} ho toh kya hoga?`
+          : `What if my hospital bill is ₹${amount.toLocaleString('en-IN')}?`;
+      handleSendMessage(prompt);
+    },
+    [currentLanguage, handleSendMessage]
+  );
+
+  const handleResetSimulation = useCallback(() => {
+    const prompt =
+      currentLanguage === 'hi'
+        ? 'सिमुलेशन रीसेट करें और वास्तविक क्लेम पर वापस जाएं'
+        : currentLanguage === 'hinglish'
+        ? 'Simulation reset karein aur actual claim par wapas aayein'
+        : 'Reset scenario back to my actual claim';
+    handleSendMessage(prompt);
+  }, [currentLanguage, handleSendMessage]);
 
   // Generate explicit UI Action Buttons based on current deterministic journey step
   const getContextualActionButtons = (): ActionButton[] => {
@@ -523,6 +547,8 @@ export const ChatPanel: React.FC = () => {
                 isLatestAssistantMsg ? getContextualActionButtons() : undefined
               }
               onExecuteProposedAction={handleExecuteProposedAction}
+              onSelectSimulationScenario={handleSelectSimulationScenario}
+              onResetSimulation={handleResetSimulation}
             />
           );
         })}

@@ -16,6 +16,7 @@ import {
   detectContradictions,
   deriveEvidenceGraph,
 } from '@/lib/twin-engine';
+import { runFinSimSimulation } from '@/lib/finsim-engine';
 import { isCustomerAuthorizedForPolicy } from '@/lib/authz-server';
 import type {
   NavigatorToolName,
@@ -63,6 +64,14 @@ export const NAVIGATOR_TOOL_REGISTRY: Record<NavigatorToolName, ToolDefinition> 
     name: 'evidence_verification',
     description: 'Evaluate cross-document evidence graph consistency, verify extracted clinical facts, and check for active contradiction mismatches.',
     parameters: {},
+  },
+  finsim_simulator: {
+    name: 'finsim_simulator',
+    description: 'Simulate hypothetical financial scenarios (e.g. gross bill changes) using authoritative CANONICAL_FINANCIALS and deriveJourneyTwin() without mutating real state.',
+    parameters: {
+      hypotheticalGross: { type: 'number', description: 'Simulated gross hospital bill in INR.' },
+      scenarioDescription: { type: 'string', description: 'Brief description of the what-if inquiry.' },
+    },
   },
 };
 
@@ -406,6 +415,17 @@ export async function executeNavigatorTool(
       const res = executeEvidenceVerification(stateSnapshot);
       result = res as unknown as Record<string, unknown>;
       summary = `Contradictions: ${res.contradictionsCount}. Verified nodes: ${res.verifiedNodes}/${res.evidenceNodesCount}.`;
+      break;
+    }
+
+    case 'finsim_simulator': {
+      const hypotheticalGross =
+        typeof args.hypotheticalGross === 'number' ? args.hypotheticalGross : 100000;
+      const scenarioDescription =
+        typeof args.scenarioDescription === 'string' ? args.scenarioDescription : undefined;
+      const res = runFinSimSimulation(hypotheticalGross, sessionMemberId, stateSnapshot, scenarioDescription);
+      result = res as unknown as Record<string, unknown>;
+      summary = `Simulated Gross: ₹${res.simulatedGross.toLocaleString('en-IN')}, Est. Payable: ₹${res.simulatedFinancials.estimatedPayable.toLocaleString('en-IN')} (Delta: +₹${res.impact.payableDelta.toLocaleString('en-IN')}). Authoritative actual claim remains Gross: ₹${res.realFinancials.grossHospitalBill.toLocaleString('en-IN')}.`;
       break;
     }
 

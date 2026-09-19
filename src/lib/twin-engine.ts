@@ -525,8 +525,9 @@ export function deriveJourneyTwin(state: JourneyState): FinancialJourneyTwin {
  */
 export function deriveEvidenceGraph(
   state: JourneyState,
-  contradictions: Contradiction[]
+  _contradictions: Contradiction[]
 ): ClaimEvidenceGraph {
+  void _contradictions;
   const isDateMismatch = state.activeMismatchScenario === 'date_mismatch';
   const isAmountMismatch = state.activeMismatchScenario === 'amount_mismatch';
 

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useJourney } from '@/context/JourneyContext';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { ExplainMoneyModal } from '@/components/claim/ExplainMoneyModal';
 import { ContradictionCard } from '@/components/journey/ContradictionCard';
 import { EvidenceGraphModal } from '@/components/journey/EvidenceGraphModal';
@@ -36,31 +35,33 @@ export const JourneyTwinCard: React.FC = () => {
   return (
     <div className="bg-white rounded-2xl border border-indigo-100/90 shadow-xs overflow-hidden transition-all duration-200">
       {/* Header Accent Bar */}
-      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 px-4 py-3 text-white flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-emerald-400 text-indigo-950 flex items-center justify-center font-bold text-xs shadow-xs">
-            ⚡
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-xs font-bold text-white tracking-tight">
+      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 px-3.5 py-3 text-white flex flex-col gap-2.5">
+        {/* Row 1: Title, Subtitle, and Engine Status Badge */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-emerald-400 text-indigo-950 flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              ⚡
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-bold text-white tracking-tight truncate">
                 Financial Journey Twin
               </h4>
-              <Badge variant="indigo" size="sm" className="bg-white/10 text-indigo-200 border-indigo-400/30 text-[9px] py-0 px-1.5">
-                Active State Engine
-              </Badge>
+              <p className="text-[10px] text-indigo-300 truncate">
+                Synchronized customer dossier & readiness
+              </p>
             </div>
-            <p className="text-[10px] text-indigo-300">
-              Synchronized customer dossier & adjudication readiness
-            </p>
           </div>
+          <span className="inline-flex items-center bg-white/10 text-indigo-200 border border-indigo-400/30 text-[9px] font-semibold py-0.5 px-2 rounded-md whitespace-nowrap shrink-0">
+            Active State Engine
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Row 2: Action Controls (Evidence Graph, Passport, Dossier Toggle) */}
+        <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-white/10">
           <button
             type="button"
             onClick={() => setShowEvidenceGraph(true)}
-            className="text-[11px] font-semibold text-indigo-100 bg-white/10 hover:bg-white/20 border border-white/15 px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            className="text-[11px] font-semibold text-indigo-100 bg-white/10 hover:bg-white/20 border border-white/15 px-2 py-1 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 whitespace-nowrap flex-1"
           >
             <span>🕸️</span>
             <span>Evidence Graph</span>
@@ -69,7 +70,7 @@ export const JourneyTwinCard: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowPassport(true)}
-            className="text-[11px] font-semibold text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/25 px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            className="text-[11px] font-semibold text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/25 px-2 py-1 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 whitespace-nowrap flex-1"
           >
             <span>🛡️</span>
             <span>Passport</span>
@@ -78,7 +79,7 @@ export const JourneyTwinCard: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-indigo-200 hover:text-white text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+            className="text-indigo-200 hover:text-white text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer whitespace-nowrap"
           >
             {isExpanded ? 'Hide' : 'Dossier'}
           </button>

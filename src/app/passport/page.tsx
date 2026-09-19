@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { deriveJourneyPassport } from '@/lib/twin-engine';
 
 export default function PassportPage() {
-  const { twin, state } = useJourney();
+  const { twin } = useJourney();
   const passport = twin.passport || deriveJourneyPassport(twin);
 
   return (

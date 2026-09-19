@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 export default function HomePage() {
   const router = useRouter();
-  const { resetJourney, goToStep, advanceStep } = useJourney();
+  const { resetJourney, goToStep } = useJourney();
 
   const handleStartHappyPath = () => {
     resetJourney();

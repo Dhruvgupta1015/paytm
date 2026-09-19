@@ -3,6 +3,7 @@ import { ChatMessage as ChatMessageType, ProposedAction } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DecisionTraceView } from './DecisionTraceView';
+import { FinSimCard } from '@/components/journey/FinSimCard';
 
 export interface ActionButton {
   label: string;
@@ -16,12 +17,16 @@ interface ChatMessageProps {
   actionButtons?: ActionButton[];
   onExplainClause?: (clause: string) => void;
   onExecuteProposedAction?: (action: ProposedAction) => void;
+  onSelectSimulationScenario?: (amount: number) => void;
+  onResetSimulation?: () => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   actionButtons,
   onExecuteProposedAction,
+  onSelectSimulationScenario,
+  onResetSimulation,
 }) => {
   const isUser = message.role === 'user';
   const isHindi = /[\u0900-\u097F]/.test(message.content);
@@ -100,6 +105,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           {/* AI Decision Trace Viewer */}
           {!isUser && message.decisionTrace && message.decisionTrace.length > 0 && (
             <DecisionTraceView events={message.decisionTrace} />
+          )}
+
+          {/* FinSim What-If Simulation Card */}
+          {!isUser && message.simulationResult && (
+            <FinSimCard
+              simulation={message.simulationResult}
+              onSelectScenario={onSelectSimulationScenario}
+              onReset={onResetSimulation}
+            />
           )}
 
           {/* Proposed Action Card (Requires Explicit User Approval) */}

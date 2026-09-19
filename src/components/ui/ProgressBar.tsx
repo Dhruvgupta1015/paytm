@@ -20,8 +20,6 @@ export function ProgressBar({
   className = '',
   showLabel = true,
   size = 'md',
-  variant = 'gradient',
-  animated = true,
 }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value));
 
