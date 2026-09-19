@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
+import { getSafeRedirect } from '@/lib/auth-redirect';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
   const { login } = useAuth();
 
   const [email, setEmail] = useState('rahul.sharma@paytm.demo');
@@ -18,6 +21,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setErrorMessage(null);
 
     if (!email.trim() || !pin.trim()) {
@@ -28,19 +33,23 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      // 1. Authoritative login + session verification via AuthContext
       const result = await login(email.trim(), pin.trim());
+
       if (!result.ok) {
         setErrorMessage(result.error || 'Invalid credentials. Please verify your email and PIN.');
         setIsSubmitting(false);
         return;
       }
 
-      // Server-authoritative routing based on verified session role
-      if (result.role === 'officer') {
-        router.push('/officer');
-      } else {
-        router.push('/journey');
-      }
+      // 2. Validate redirect destination with strict role and path security (Phase 10)
+      const targetPath = getSafeRedirect(redirectParam, result.role);
+
+      // 3. Flush Next.js client router cache so server components re-evaluate session cookie
+      router.refresh();
+
+      // 4. Navigate to verified target without manual refresh (Phase 9)
+      router.replace(targetPath);
     } catch {
       setErrorMessage('Unable to connect to authentication server. Please try again.');
       setIsSubmitting(false);
@@ -48,6 +57,7 @@ export default function LoginPage() {
   };
 
   const selectDemoPersona = (demoEmail: string, demoPin: string) => {
+    if (isSubmitting) return;
     setEmail(demoEmail);
     setPin(demoPin);
     setErrorMessage(null);
@@ -89,8 +99,9 @@ export default function LoginPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => selectDemoPersona('rahul.sharma@paytm.demo', '1234')}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     email === 'rahul.sharma@paytm.demo'
                       ? 'border-indigo-600 bg-indigo-50/70 shadow-xs'
                       : 'border-slate-200 hover:border-indigo-200 bg-slate-50/50'
@@ -102,8 +113,9 @@ export default function LoginPage() {
 
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => selectDemoPersona('priya.verma@paytm.officer', '9042')}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                     email === 'priya.verma@paytm.officer'
                       ? 'border-indigo-600 bg-indigo-50/70 shadow-xs'
                       : 'border-slate-200 hover:border-indigo-200 bg-slate-50/50'
@@ -131,11 +143,12 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="email"
+                disabled={isSubmitting}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@paytm.demo"
                 required
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white text-indigo-950 placeholder-slate-400 focus:outline-none transition-all font-mono"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white text-indigo-950 placeholder-slate-400 focus:outline-none transition-all font-mono disabled:bg-slate-100 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -148,11 +161,12 @@ export default function LoginPage() {
                 id="pin"
                 type="password"
                 maxLength={6}
+                disabled={isSubmitting}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="••••"
                 required
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white text-indigo-950 placeholder-slate-400 focus:outline-none transition-all font-mono text-center tracking-widest text-lg"
+                className="w-full px-4 py-2.5 text-sm rounded-xl border border-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white text-indigo-950 placeholder-slate-400 focus:outline-none transition-all font-mono text-center tracking-widest text-lg disabled:bg-slate-100 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -162,12 +176,15 @@ export default function LoginPage() {
                 type="submit"
                 size="lg"
                 loading={isSubmitting}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md"
+                disabled={isSubmitting}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md cursor-pointer disabled:cursor-not-allowed"
               >
-                <span>Authenticate Session</span>
-                <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <span>{isSubmitting ? 'Authenticating Session...' : 'Authenticate Session'}</span>
+                {!isSubmitting && (
+                  <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                )}
               </Button>
             </div>
 
@@ -188,5 +205,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[calc(100vh-128px)] flex items-center justify-center p-6 text-xs text-text-muted">
+          Loading authentication gateway...
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

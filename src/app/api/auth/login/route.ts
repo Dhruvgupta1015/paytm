@@ -180,7 +180,12 @@ export async function POST(request: Request) {
       ok: true,
       user: userPayload,
     },
-    { status: 200 }
+    {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
   );
 
   // Set HTTP-only, secure, SameSite session cookie

@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/Badge';
 export function Header() {
   const pathname = usePathname();
   const { state, resetJourney } = useJourney();
-  const { user, role, isAuthenticated, logout } = useAuth();
+  const { user, role, isAuthenticated, isLoading, logout } = useAuth();
 
+  const isLoginPage = pathname === '/login';
   const isOfficerRoute = pathname.startsWith('/officer');
   const isOfficerUser = role === 'officer';
   const currentStep = state.steps.find((s) => s.status === 'current');
@@ -30,30 +31,73 @@ export function Header() {
           {/* Left: Context / Title */}
           <div className="flex items-center gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-indigo-900">
-                {isOfficerRoute || isOfficerUser
-                  ? 'Claims Officer Adjudication'
-                  : 'Health Insurance Claim Journey'}
-              </h2>
-              {isOfficerRoute || isOfficerUser ? (
-                <p className="text-xs text-amber-700 font-medium mt-0.5">
-                  Internal Escalation & Review Dashboard
-                </p>
-              ) : (
-                currentStep && (
-                  <p className="text-xs text-text-secondary mt-0.5">
-                    Current: <span className="font-medium text-indigo-600">{currentStep.label}</span>
+              {isLoginPage ? (
+                <>
+                  <h2 className="text-sm font-semibold text-indigo-900">
+                    FinJourney AI Secure Access
+                  </h2>
+                  <p className="text-xs text-indigo-600 font-medium mt-0.5">
+                    Authentication & Session Gateway
                   </p>
-                )
+                </>
+              ) : isLoading ? (
+                <>
+                  <h2 className="text-sm font-semibold text-indigo-900">
+                    FinJourney AI Copilot
+                  </h2>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    Verifying session...
+                  </p>
+                </>
+              ) : isAuthenticated && user ? (
+                <>
+                  <h2 className="text-sm font-semibold text-indigo-900">
+                    {isOfficerRoute || isOfficerUser
+                      ? 'Claims Officer Adjudication'
+                      : 'Health Insurance Claim Journey'}
+                  </h2>
+                  {isOfficerRoute || isOfficerUser ? (
+                    <p className="text-xs text-amber-700 font-medium mt-0.5">
+                      Internal Escalation & Review Dashboard
+                    </p>
+                  ) : (
+                    currentStep && (
+                      <p className="text-xs text-text-secondary mt-0.5">
+                        Current: <span className="font-medium text-indigo-600">{currentStep.label}</span>
+                      </p>
+                    )
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className="text-sm font-semibold text-indigo-900">
+                    {isOfficerRoute ? 'Claims Officer Adjudication' : 'Health Insurance Claim Journey'}
+                  </h2>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    Deterministic AI Financial Journey Copilot
+                  </p>
+                </>
               )}
             </div>
           </div>
 
           {/* Right: Authenticated Identity & Navigation */}
           <div className="flex items-center gap-3">
-            {isAuthenticated && user ? (
+            {isLoginPage ? (
+              // Clean neutral shell for /login page — no old user identity or persona controls (Phase 11)
+              <div className="flex items-center gap-1.5 text-xs text-indigo-800 bg-indigo-50 border border-indigo-200/60 px-3 py-1.5 rounded-xl font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Secure Session Gate</span>
+              </div>
+            ) : isLoading ? (
+              // Neutral loading skeleton while checking server session (Phase 6 & 15)
+              <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs animate-pulse">
+                <div className="w-6 h-6 rounded-full bg-slate-200" />
+                <div className="w-20 h-3 bg-slate-200 rounded" />
+              </div>
+            ) : isAuthenticated && user ? (
               <div className="flex items-center gap-2.5">
-                {/* Persona Navigation (Role-specific, not a switcher) */}
+                {/* Persona Navigation (Role-specific verified destination) */}
                 {role === 'customer' && (
                   <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-indigo-100/80 text-xs">
                     <Link
@@ -89,14 +133,14 @@ export function Header() {
                   </div>
                 )}
 
-                {/* Authenticated Identity Pill */}
+                {/* Authenticated Identity Pill (Authoritative from /api/auth/me only) */}
                 <div className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
                   <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px]">
                     {user.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2) : 'U'}
                   </div>
                   <div className="text-left">
                     <div className="font-semibold text-indigo-950 text-xs leading-none">
-                      {user.name || (role === 'officer' ? 'Priya Verma' : 'Rahul Sharma')}
+                      {user.name}
                     </div>
                     <div className="text-[10px] text-text-muted mt-0.5 leading-none">
                       <Badge
@@ -122,6 +166,7 @@ export function Header() {
                 </Button>
               </div>
             ) : (
+              // Unauthenticated visitor
               <Link href="/login">
                 <Button variant="primary" size="sm" className="text-xs">
                   Sign In
@@ -129,8 +174,8 @@ export function Header() {
               </Link>
             )}
 
-            {/* Customer progress pill & Reset button */}
-            {!isOfficerRoute && role === 'customer' && (
+            {/* Customer progress pill & Reset button (Only visible when verified customer on customer routes) */}
+            {!isLoginPage && !isLoading && isAuthenticated && role === 'customer' && !isOfficerRoute && (
               <div className="flex items-center gap-2 pl-2 border-l border-indigo-100">
                 <div className="hidden lg:flex items-center gap-2 bg-indigo-50 rounded-full px-3 py-1.5">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-soft" />

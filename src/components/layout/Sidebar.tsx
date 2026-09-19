@@ -7,6 +7,16 @@ import { NAV_ITEMS, ROUTES } from '@/lib/constants';
 import { useAuth } from '@/context/AuthContext';
 
 const icons: Record<string, React.ReactNode> = {
+  home: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  ),
+  login: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+    </svg>
+  ),
   journey: (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -46,24 +56,23 @@ const icons: Record<string, React.ReactNode> = {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, role } = useAuth();
+  const isLoginPage = pathname === '/login';
+  const { user, role, isAuthenticated, isLoading } = useAuth();
 
   const isOfficer = role === 'officer';
-  const displayName = user?.name || (isOfficer ? 'Priya Verma' : 'Rahul Sharma');
-  const displayId =
-    (user && 'officerId' in user && typeof user.officerId === 'string' && user.officerId) ||
-    (user && 'memberId' in user && typeof user.memberId === 'string' && user.memberId) ||
-    (isOfficer ? 'PAYTM-ESC-9042' : 'MEM-2024-78432');
-  const initials = displayName
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .slice(0, 2);
 
-  // Officer navigation vs Customer navigation
-  const navItems = isOfficer
-    ? [{ label: 'Escalation Queue', href: ROUTES.OFFICER, icon: 'officer' }]
-    : NAV_ITEMS;
+  // Role-appropriate navigation items (Phase 12)
+  let navItems: readonly { label: string; href: string; icon: string }[];
+  if (isLoginPage || !isAuthenticated || isLoading) {
+    navItems = [
+      { label: 'Platform Home', href: '/', icon: 'home' },
+      { label: 'Demo Sign In', href: '/login', icon: 'login' },
+    ];
+  } else if (isOfficer) {
+    navItems = [{ label: 'Escalation Queue', href: ROUTES.OFFICER, icon: 'officer' }];
+  } else {
+    navItems = NAV_ITEMS;
+  }
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-bg-sidebar flex flex-col z-40">
@@ -78,7 +87,7 @@ export function Sidebar() {
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">FinJourney AI</h1>
             <p className="text-[10px] text-indigo-300 tracking-widest uppercase">
-              {isOfficer ? 'Officer Console' : 'Insurance Copilot'}
+              {isLoginPage ? 'Security Gateway' : isOfficer ? 'Officer Console' : 'Insurance Copilot'}
             </p>
           </div>
         </Link>
@@ -87,7 +96,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
           return (
             <Link
               key={item.href}
@@ -111,17 +120,35 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer Identity (Authoritative server identity only, never hardcoded fallbacks) */}
       <div className="px-4 py-4 border-t border-indigo-700/30">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-            {initials}
+        {isLoginPage || !isAuthenticated || isLoading ? (
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-full bg-indigo-800/80 border border-indigo-700/60 flex items-center justify-center text-xs text-indigo-300 shadow-xs">
+              🔒
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-white truncate">
+                {isLoading ? 'Verifying Session' : 'Guest Access'}
+              </p>
+              <p className="text-[10px] text-indigo-300 truncate">
+                {isLoading ? 'Checking server...' : 'Sign In Required'}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{displayName}</p>
-            <p className="text-[11px] text-indigo-300 truncate font-mono">{displayId}</p>
+        ) : user ? (
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-xs">
+              {user.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2) : 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-[11px] text-indigo-300 truncate font-mono">
+                {'officerId' in user && user.officerId ? user.officerId : 'memberId' in user && user.memberId ? user.memberId : ''}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </aside>
   );

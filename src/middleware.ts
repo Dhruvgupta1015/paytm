@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession, SESSION_COOKIE_NAME } from '@/lib/auth-server';
+import { getSafeRedirect } from '@/lib/auth-redirect';
 
 // Server-authoritative route protection middleware
 export async function middleware(request: NextRequest) {
@@ -41,14 +42,10 @@ export async function middleware(request: NextRequest) {
     if (!isAuthenticated) {
       return NextResponse.next();
     }
-    // Already authenticated: redirect to respective workspace
-    if (role === 'customer') {
-      return NextResponse.redirect(new URL('/journey', request.url));
-    }
-    if (role === 'officer') {
-      return NextResponse.redirect(new URL('/officer', request.url));
-    }
-    return NextResponse.next();
+    // Already authenticated: redirect to validated redirect target or role-appropriate default
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
+    const target = getSafeRedirect(redirectParam, role);
+    return NextResponse.redirect(new URL(target, request.url));
   }
 
   // ─── UNAUTHORIZED PAGE ───────────────────────────────────────────────────

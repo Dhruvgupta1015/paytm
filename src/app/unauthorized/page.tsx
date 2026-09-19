@@ -1,18 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-
-interface UserInfo {
-  role: 'customer' | 'officer';
-  name?: string;
-  memberId?: string;
-  officerId?: string;
-  email?: string;
-}
+import { useAuth } from '@/context/AuthContext';
 
 function UnauthorizedContent() {
   const router = useRouter();
@@ -20,44 +13,14 @@ function UnauthorizedContent() {
   const target = searchParams.get('target') || '';
   const paramRole = searchParams.get('role') || '';
 
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetch('/api/auth/me')
-      .then((res) => {
-        if (!res.ok) {
-          router.replace('/login');
-          return null;
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (isMounted && data?.ok && data.user) {
-          setUser(data.user);
-        }
-      })
-      .catch(() => {
-        // Fallback to param if fetch fails
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
 
   const handleSignOut = async () => {
     setLoggingOut(true);
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await logout();
     } catch {
-      // safe ignore
-    } finally {
       router.push('/login');
     }
   };
@@ -112,12 +75,14 @@ function UnauthorizedContent() {
 
               <div className="text-xs text-indigo-950 space-y-1 pt-1">
                 <p>
-                  <strong>User:</strong> {user?.name || (currentRole === 'officer' ? 'Priya Verma' : 'Rahul Sharma')}
+                  <strong>User:</strong> {user?.name || (currentRole === 'officer' ? 'Authenticated Officer' : 'Authenticated Customer')}
                 </p>
                 <p>
                   <strong>Identifier:</strong>{' '}
                   <span className="font-mono font-medium text-indigo-900">
-                    {user?.memberId || user?.officerId || (currentRole === 'officer' ? 'PAYTM-ESC-9042' : 'MEM-2024-78432')}
+                    {(user && 'memberId' in user && user.memberId) ||
+                      (user && 'officerId' in user && user.officerId) ||
+                      'Active Session'}
                   </span>
                 </p>
                 <p>

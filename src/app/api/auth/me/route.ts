@@ -8,10 +8,16 @@ export async function GET(request: Request) {
   // Any client-supplied headers or parameters are completely ignored
   const session = await getSessionFromRequest(request);
 
+  const noCacheHeaders = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+
   if (!session) {
     return NextResponse.json(
       { ok: false, error: 'Unauthenticated' },
-      { status: 401 }
+      { status: 401, headers: noCacheHeaders }
     );
   }
 
@@ -39,6 +45,6 @@ export async function GET(request: Request) {
       ok: true,
       user: userPayload,
     },
-    { status: 200 }
+    { status: 200, headers: noCacheHeaders }
   );
 }
