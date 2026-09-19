@@ -17,7 +17,7 @@ interface Stage {
 }
 
 export const ClaimTracker: React.FC = () => {
-  const { state } = useJourney();
+  const { state, completeStep } = useJourney();
   const claimId = state.claimId || 'CLM-2026-00142';
   const twin = state.twin;
 
@@ -30,7 +30,12 @@ export const ClaimTracker: React.FC = () => {
   const policyNumber = twin?.policy?.id || 'POL-HEALTH-001';
   const hospitalName = twin?.hospital?.name || 'Apollo Hospital, Delhi';
 
-  const [activeStageIndex, setActiveStageIndex] = useState(2); // 0-indexed: 0=Initiated, 1=Docs Verified, 2=Submitted for Review, 3=Insurer Adjudication, 4=Settlement
+  const trackingStep = state.steps.find((s) => s.key === 'tracking');
+  const isTrackingCompleted = trackingStep?.status === 'completed';
+
+  const [simulatedStageIndex, setSimulatedStageIndex] = useState<number | null>(null);
+  // Derived stage index: 0=Initiated, 1=Docs Verified, 2=Submitted for Review, 3=Insurer Adjudication, 4=Settlement
+  const activeStageIndex = isTrackingCompleted ? 4 : (simulatedStageIndex ?? 2);
 
   const stages: Stage[] = [
     {
@@ -55,20 +60,26 @@ export const ClaimTracker: React.FC = () => {
     {
       title: 'Insurer Medical Adjudication',
       subtitle: 'Senior medical underwriter inspecting hospital bills & test reports',
-      date: activeStageIndex >= 3 ? 'In Progress' : 'Estimated 15 Sep 2026',
+      date: activeStageIndex > 3 ? 'Cleared 14 Sep 2026' : activeStageIndex === 3 ? 'In Progress' : 'Estimated 15 Sep 2026',
       status: activeStageIndex > 3 ? 'completed' : activeStageIndex === 3 ? 'current' : 'upcoming',
-      notes: 'Adjudication in progress. No additional documentation requested yet.',
+      notes: activeStageIndex === 3 ? 'Adjudication in progress. No additional documentation requested yet.' : undefined,
     },
     {
       title: 'Final Settlement & Direct Bank Transfer',
       subtitle: 'Amount credited directly via Paytm Payments Bank / IMPS',
-      date: activeStageIndex >= 4 ? 'Completed' : 'Expected 17 Sep 2026',
+      date: activeStageIndex >= 4 ? 'Completed Today' : 'Expected 17 Sep 2026',
       status: activeStageIndex >= 4 ? 'completed' : 'upcoming',
+      notes: activeStageIndex >= 4 ? '₹78,500 successfully credited to policyholder account via IMPS.' : undefined,
     },
   ];
 
   const handleSimulateNextStage = () => {
-    setActiveStageIndex((prev) => Math.min(stages.length - 1, prev + 1));
+    const currentIndex = activeStageIndex;
+    const nextIndex = Math.min(stages.length - 1, currentIndex + 1);
+    setSimulatedStageIndex(nextIndex);
+    if (nextIndex >= stages.length - 1) {
+      completeStep('tracking');
+    }
   };
 
   const handleDownloadReceipt = () => {
@@ -100,9 +111,19 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
             <h2 className="text-xl font-bold text-indigo-950">
               Live Claim Tracking
             </h2>
-            <Badge variant="warning" size="sm">
-              Submitted for Review
-            </Badge>
+            {activeStageIndex >= 4 ? (
+              <Badge variant="success" size="sm">
+                Settlement Completed
+              </Badge>
+            ) : activeStageIndex === 3 ? (
+              <Badge variant="indigo" size="sm">
+                Under Adjudication
+              </Badge>
+            ) : (
+              <Badge variant="warning" size="sm">
+                Submitted for Review
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-text-secondary mt-1">
             Real-time status updates synced with insurer claim adjudication portal.
@@ -127,10 +148,10 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
             size="sm"
             onClick={handleSimulateNextStage}
             disabled={activeStageIndex >= stages.length - 1}
-            className="text-xs bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
-            title="Advance stage for demo presentation"
+            className="text-xs bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed"
+            title={activeStageIndex >= stages.length - 1 ? 'Settlement completed' : 'Advance stage for demo presentation'}
           >
-            Advance Stage (Demo)
+            {activeStageIndex >= stages.length - 1 ? '✓ Settlement Finalized' : 'Advance Stage (Demo)'}
           </Button>
         </div>
       </div>
@@ -150,8 +171,12 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
           <span className="font-semibold text-indigo-950 truncate block">Apollo Hospital, Delhi</span>
         </div>
         <div>
-          <span className="text-text-muted block">Expected Adjudication</span>
-          <span className="font-semibold text-indigo-700">3–5 Business Days</span>
+          <span className="text-text-muted block">
+            {activeStageIndex >= 4 ? 'Settlement Status' : 'Expected Adjudication'}
+          </span>
+          <span className={`font-semibold ${activeStageIndex >= 4 ? 'text-emerald-700' : 'text-indigo-700'}`}>
+            {activeStageIndex >= 4 ? 'Funds Credited (IMPS)' : '3–5 Business Days'}
+          </span>
         </div>
       </div>
 
@@ -210,7 +235,7 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
                     )}
                     {isCompleted && (
                       <span className="text-[10px] text-emerald-600 font-semibold">
-                        Cleared
+                        {idx === 4 ? 'Completed' : 'Cleared'}
                       </span>
                     )}
                   </div>
@@ -223,9 +248,15 @@ Demo Notice: Synthetic demo claim for Paytm Build for India AI Hackathon.`;
                   {stage.subtitle}
                 </p>
 
-                {stage.notes && isCurrent && (
-                  <div className="mt-2 p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-900 flex items-center gap-2">
-                    <span className="text-base">ℹ️</span>
+                {stage.notes && (isCurrent || (idx === 4 && activeStageIndex >= 4)) && (
+                  <div
+                    className={`mt-2 p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                      idx === 4
+                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                        : 'bg-indigo-50/70 border-indigo-100 text-indigo-900'
+                    }`}
+                  >
+                    <span className="text-base">{idx === 4 ? '✅' : 'ℹ️'}</span>
                     <span>{stage.notes}</span>
                   </div>
                 )}

@@ -103,6 +103,8 @@ interface JourneyContextValue {
   setLanguage: (lang: SupportedLanguage) => void;
   /** Reset entire journey */
   resetJourney: () => void;
+  /** Mark a step as completed (e.g. 'tracking' upon final settlement) */
+  completeStep: (keyOrId: string | number) => void;
 }
 
 const JourneyContext = createContext<JourneyContextValue | null>(null);
@@ -136,7 +138,17 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
   const advanceStep = useCallback(() => {
     setState((prev) => {
       const { steps, currentStepIndex } = prev;
-      if (currentStepIndex >= steps.length - 1) return prev;
+      if (currentStepIndex >= steps.length - 1) {
+        const newSteps = steps.map((step, i) => {
+          if (i === currentStepIndex) return { ...step, status: 'completed' as const };
+          return step;
+        });
+        return withTwin({
+          ...prev,
+          steps: newSteps,
+          progress: computeProgress(newSteps),
+        });
+      }
 
       const newSteps = steps.map((step, i) => {
         if (i === currentStepIndex) return { ...step, status: 'completed' as const };
@@ -154,6 +166,31 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
     });
   }, [computeProgress]);
 
+  const completeStep = useCallback(
+    (keyOrId: string | number) => {
+      setState((prev) => {
+        const targetIndex =
+          typeof keyOrId === 'number'
+            ? keyOrId - 1
+            : prev.steps.findIndex((s) => s.key === keyOrId || s.id.toString() === keyOrId);
+
+        if (targetIndex < 0 || targetIndex >= prev.steps.length) return prev;
+
+        const newSteps = prev.steps.map((step, i) => {
+          if (i === targetIndex) return { ...step, status: 'completed' as const };
+          return step;
+        });
+
+        return withTwin({
+          ...prev,
+          steps: newSteps,
+          progress: computeProgress(newSteps),
+        });
+      });
+    },
+    [computeProgress]
+  );
+
   const goToStep = useCallback(
     (key: string) => {
       setState((prev) => {
@@ -162,7 +199,10 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
 
         const newSteps = prev.steps.map((step, i) => {
           if (i < targetIndex) return { ...step, status: 'completed' as const };
-          if (i === targetIndex) return { ...step, status: 'current' as const };
+          if (i === targetIndex) {
+            const status = i === prev.steps.length - 1 && step.status === 'completed' ? ('completed' as const) : ('current' as const);
+            return { ...step, status };
+          }
           return step;
         });
 
@@ -186,7 +226,10 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
 
         const newSteps = prev.steps.map((step, i) => {
           if (i < targetIndex) return { ...step, status: 'completed' as const };
-          if (i === targetIndex) return { ...step, status: 'current' as const };
+          if (i === targetIndex) {
+            const status = i === prev.steps.length - 1 && step.status === 'completed' ? ('completed' as const) : ('current' as const);
+            return { ...step, status };
+          }
           return { ...step, status: 'upcoming' as const };
         });
 
@@ -295,6 +338,7 @@ export function JourneyProvider({ children }: { children: React.ReactNode }) {
         setSimulateLowConfidence,
         setLanguage,
         resetJourney,
+        completeStep,
       }}
     >
       {children}

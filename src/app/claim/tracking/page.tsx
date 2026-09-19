@@ -3,9 +3,13 @@
 import React from 'react';
 import { ClaimTracker } from '@/components/claim/ClaimTracker';
 import { JourneyTimeline } from '@/components/journey/JourneyTimeline';
+import { useJourney } from '@/context/JourneyContext';
 import Link from 'next/link';
 
 export default function ClaimTrackingPage() {
+  const { state } = useJourney();
+  const isTrackingCompleted = state.steps.find((s) => s.key === 'tracking')?.status === 'completed';
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-128px)] bg-slate-50/50">
       {/* Top Bar with timeline */}
@@ -23,7 +27,7 @@ export default function ClaimTrackingPage() {
           </div>
 
           <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full font-semibold border border-emerald-200/50">
-            Step 8 of 8 · Tracking Active
+            {isTrackingCompleted ? 'Step 8 of 8 · Claim Settled (100%)' : 'Step 8 of 8 · Tracking Active'}
           </div>
         </div>
 
